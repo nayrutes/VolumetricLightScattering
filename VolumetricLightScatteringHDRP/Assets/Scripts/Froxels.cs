@@ -1,9 +1,12 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Reflection;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.HighDefinition;
+using UnityEngine.Serialization;
 
 //[ExecuteInEditMode]
 public class Froxels : MonoBehaviour
@@ -11,10 +14,23 @@ public class Froxels : MonoBehaviour
 //    [Header("widthX, heightY, depthZ")]
     //private Vector2 sizeNear, sizeFar; //defined by view frustrum
 
+    [SerializeField] private ComputeShader scatteringCompute;
+    [SerializeField] private RenderTexture scatteringInput;
+    [SerializeField] private RenderTexture scatteringOutput;
+    [SerializeField] private Material renderMaterial;
+    [SerializeField] private Material fullScreenPassHdrpMaterial;
+    [SerializeField] private Vector4 insetValue;
+    
     [Header("inX, inY, inZ")]
     [SerializeField] private Vector3Int amount;
+
+    public bool enableDebugDraw = true;
     public bool drawCorners = true;
     public bool drawEdges = true;
+    public bool toggleSingleAll = false;
+    public Vector3Int singleFroxel;
+    public bool enableScatteringCompute = true;
+    public bool enableGenerateFroxelsEveryFrame = true;
     
     [Header("unused")]
     [SerializeField] private AnimationCurve depthDistribution;
@@ -29,14 +45,36 @@ public class Froxels : MonoBehaviour
     void Start()
     {
         _camera = GetComponent<Camera>();
+        GenerateFroxels();
     }
     
     void Update()
     {
         DrawOutlineFrustrum();
-        GenerateFroxels();
+        if(enableGenerateFroxelsEveryFrame)
+            GenerateFroxels();
+        if (enableDebugDraw)
+        {
+            if (toggleSingleAll)
+            {
+                foreach (Frustum frustum in _froxels)
+                {
+                    DrawFrustum(frustum);
+                }
+            }
+            else
+            {
+                DrawFrustum(_froxels[singleFroxel.z * (amount.x * amount.y) + singleFroxel.y * amount.x + singleFroxel.x]);
+            }
+        }
+        if(enableScatteringCompute)
+            RunScatteringCompute();
         
+        fullScreenPassHdrpMaterial.SetVector("_Amount", new Vector4(amount.x,amount.y,amount.z,0));
+        fullScreenPassHdrpMaterial.SetTexture("VolumetricFogSampler",scatteringOutput);
         
+
+
         //Testing Projection
 //        Vector3[] points = new Vector3[8];
 //
@@ -106,7 +144,7 @@ public class Froxels : MonoBehaviour
                     }
 
                     frustum.corners = corners;
-                    DrawFrustum(frustum);
+                    //DrawFrustum(frustum);
                     
                     //frustum planes are inward-facing, generateClockwise
 //                    Plane left = new Plane();
@@ -185,8 +223,49 @@ public class Froxels : MonoBehaviour
 //            Debug.DrawLine(nearCornersWorld[i],farCornersWorld[i],Color.cyan);
 //        }
     }
-    
-    
+
+
+    void RunScatteringCompute()
+    {
+        
+//        RenderTexture textureInput = new RenderTexture(amount.x,amount.y,0,RenderTextureFormat.ARGBFloat,0);
+//        textureInput.dimension = TextureDimension.Tex3D;
+//        textureInput.volumeDepth = amount.z;
+//        //textureInput.filterMode = 
+//        textureInput.enableRandomWrite = true;
+//        RenderTexture textureOutput = new RenderTexture(amount.x,amount.y,0,RenderTextureFormat.ARGBFloat,0);
+//        textureOutput.dimension = TextureDimension.Tex3D;
+//        textureOutput.volumeDepth = amount.z;
+//        textureOutput.enableRandomWrite = true;
+
+
+        scatteringInput.Release();
+        scatteringOutput.Release();
+        scatteringInput.width = scatteringOutput.width = amount.x;
+        scatteringInput.height = scatteringOutput.height = amount.y;
+        scatteringInput.volumeDepth = scatteringOutput.volumeDepth = amount.z;
+        scatteringInput.enableRandomWrite = true;
+        scatteringOutput.enableRandomWrite = true;
+        scatteringInput.Create();
+        scatteringOutput.Create();
+        
+        scatteringCompute.SetTexture(0, "Input",scatteringInput);
+        scatteringCompute.SetTexture(0, "Result",scatteringOutput);
+        scatteringCompute.SetVector("insetValue",insetValue);
+        
+        int threadGroupsX = amount.z / 256;
+        scatteringCompute.Dispatch(0, threadGroupsX,1,1);
+        
+        scatteringCompute.SetInt("VOLUME_DEPTH",amount.z);
+    }
+
+//    private void OnRenderImage(RenderTexture src, RenderTexture dest)
+//    {
+//        //renderMaterial.SetTexture();
+//        Graphics.Blit(src,dest,renderMaterial);
+//    }
+
+
     public static void DrawSphere (Vector3 centre, float radius, Color color) {
         Debug.DrawRay(new Vector3(centre.x-radius,centre.y,centre.z), new  Vector3(radius*2 ,0,0), color);
         Debug.DrawRay(new Vector3(centre.x,centre.y-radius,centre.z), new  Vector3(0 ,radius*2,0), color);

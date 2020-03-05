@@ -1,0 +1,51 @@
+﻿// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel CSMain
+
+// Create a RenderTexture with enableRandomWrite flag and set it
+// with cs.SetTexture
+RWTexture3D<float4> Input;
+RWTexture3D<float4> Result;
+uint VOLUME_DEPTH;
+float4 insetValue;
+
+//Beer-Lambert's Law?
+//One Step
+float4 AccumulateScattering(float4 colorAndDensityFront, float4 colorAndDensityBack)
+{
+    float3 light = colorAndDensityFront.rgb + saturate(exp(-colorAndDensityFront.a))*colorAndDensityBack.rgb;
+    return float4(light.rgb, colorAndDensityFront.a + colorAndDensityBack.a);
+}
+
+//Write Out Final Scattering Value
+void WriteOutput(in uint3 pos, in float4 colorAndDensity)
+{
+    float4 finalValue = float4(colorAndDensity.rgb, exp(-colorAndDensity.a));
+    Result[pos].rgba = finalValue;
+}
+
+
+[numthreads(256,1,1)]
+void CSMain (uint3 id : SV_DispatchThreadID)
+{
+    // TODO: insert actual code here!
+    
+    //override Input for testing
+    for(uint d = 0; d < VOLUME_DEPTH;d++)
+    {
+        //float4 insetValue = float4(0.5,0.5,0.5,0.5);
+        Input[uint3(id.xy,d)] = insetValue;
+    }
+    
+    
+    //actual calculation
+    float4 currentSliceValue = Input[uint3(id.xy,0)].rgba;
+    WriteOutput(uint3(id.xy,0),currentSliceValue);
+    
+    for(uint z = 1; z < VOLUME_DEPTH;z++)
+    {
+        float4 nextValue = Input[uint3(id.xy, z)].rgba;
+        currentSliceValue = AccumulateScattering(currentSliceValue, nextValue);
+        WriteOutput(uint3(id.xy, z), currentSliceValue);
+    }
+    //Result[id.xyz] = float4(id.x & id.y, (id.x & 15)/15.0, (id.y & 15)/15.0, 0.0);
+}
