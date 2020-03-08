@@ -1,0 +1,51 @@
+﻿// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel CSMain
+
+// Create a RenderTexture with enableRandomWrite flag and set it
+// with cs.SetTexture
+//Texture3D<float4> Input;
+RWTexture3D<float4> Input;
+RWTexture2D<float4> Output;
+int toSlice;
+//float4 insetValue;
+float4 ratios;
+float4 size;
+
+SamplerState samplerInput;
+
+[numthreads(1,1,1)]
+void CSMain (uint3 id : SV_DispatchThreadID)
+{
+    // TODO: insert actual code here!
+     /*
+     for (int x = 0; x < size.x; x++) {
+            for (int y = 0; y < size.y; y++) {
+                for (int z = 0; z < size.z; z++) {
+                    //Color c = new Color (x * r, y * r, z * r, 1.0f);
+                    //colorArray[x + (y * size) + (z * size * size)] = c;
+                    float4 c = float4(x * ratios.x, y * ratios.y, z * ratios.z, 1.0f);
+                    Input[uint3(x,y,z)] = c;
+                    
+                }
+            }
+        }
+    */
+    for (int xx = 0; xx < size.x; xx++) {
+        for (int yy = 0; yy < size.y; yy++) {
+            for (int zz = 0; zz < size.z; zz++) {
+            if(zz==toSlice)
+                {
+                   //Output[uint2(xx,yy)] = Input.SampleLevel(samplerInput, uint3(xx,yy,zz), 0);
+                   Output[uint2(xx,yy)] = Input[uint3(xx,yy,zz)];
+                }
+            }
+        }
+    }
+    
+    
+    //if(id.z == toSlice)
+    //{
+    //    Output[id.xy] = Input[id.xyz];
+    //}
+    
+}

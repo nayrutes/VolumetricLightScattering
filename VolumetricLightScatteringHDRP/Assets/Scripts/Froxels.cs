@@ -37,6 +37,8 @@ public class Froxels : MonoBehaviour
     
     private Camera _camera;
     private Frustum[] _froxels;
+
+    private DebugSlice _debugSlice;
     struct Froxel
     {
         public Frustum frustum;
@@ -45,6 +47,8 @@ public class Froxels : MonoBehaviour
     void Start()
     {
         _camera = GetComponent<Camera>();
+        _debugSlice = FindObjectOfType<DebugSlice>();
+        _debugSlice.texture3DToSlice = scatteringOutput;
         GenerateFroxels();
     }
     
@@ -136,6 +140,7 @@ public class Froxels : MonoBehaviour
                     corners[6] = invViewProjMatrix.MultiplyPoint(forward * inZNear + right*inXFractionLeft + up* inYFractionTop);
                     corners[7] = invViewProjMatrix.MultiplyPoint(forward * inZNear + right*inXFractionRight + up* inYFractionTop);
                     
+                    //TODO seperate ffrom function and call every frame
                     for(int index=0; index<corners.Length;index++)
                     {
 
@@ -252,9 +257,10 @@ public class Froxels : MonoBehaviour
         scatteringCompute.SetTexture(0, "Input",scatteringInput);
         scatteringCompute.SetTexture(0, "Result",scatteringOutput);
         scatteringCompute.SetVector("insetValue",insetValue);
+        scatteringCompute.SetVector("size", new Vector4(scatteringInput.width,scatteringInput.height,scatteringInput.volumeDepth,0));
         
-        int threadGroupsX = amount.z / 256;
-        scatteringCompute.Dispatch(0, threadGroupsX,1,1);
+        //int threadGroupsX = amount.z / 256;
+        scatteringCompute.Dispatch(0, 1,1,1);
         
         scatteringCompute.SetInt("VOLUME_DEPTH",amount.z);
     }

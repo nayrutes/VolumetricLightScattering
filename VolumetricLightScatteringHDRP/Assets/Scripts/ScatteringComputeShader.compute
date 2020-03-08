@@ -7,6 +7,7 @@ RWTexture3D<float4> Input;
 RWTexture3D<float4> Result;
 uint VOLUME_DEPTH;
 float4 insetValue;
+float3 size;
 
 //Beer-Lambert's Law?
 //One Step
@@ -23,29 +24,43 @@ void WriteOutput(in uint3 pos, in float4 colorAndDensity)
     Result[pos].rgba = finalValue;
 }
 
+void Insert(){
+    for (int xx = 0; xx < size.x; xx++) {
+        for (int yy = 0; yy < size.y; yy++) {
+            for (int zz = 0; zz < size.z; zz++) {
+            Input[uint3(xx,yy,zz)] = insetValue;
+            }
+        }
+    }
+}
 
-[numthreads(256,1,1)]
+[numthreads(1,1,1)]
 void CSMain (uint3 id : SV_DispatchThreadID)
 {
     // TODO: insert actual code here!
     
     //override Input for testing
-    for(uint d = 0; d < VOLUME_DEPTH;d++)
-    {
+    //for(uint d = 0; d < VOLUME_DEPTH;d++)
+    //{
         //float4 insetValue = float4(0.5,0.5,0.5,0.5);
-        Input[uint3(id.xy,d)] = insetValue;
-    }
-    
+    //    Input[uint3(id.xy,d)] = insetValue;
+    //}
+    Insert();
     
     //actual calculation
-    float4 currentSliceValue = Input[uint3(id.xy,0)].rgba;
-    WriteOutput(uint3(id.xy,0),currentSliceValue);
-    
-    for(uint z = 1; z < VOLUME_DEPTH;z++)
-    {
-        float4 nextValue = Input[uint3(id.xy, z)].rgba;
-        currentSliceValue = AccumulateScattering(currentSliceValue, nextValue);
-        WriteOutput(uint3(id.xy, z), currentSliceValue);
+    for (uint x=0; x<size.x; x++){
+        for (uint y=0; y<size.y; y++){
+            float4 currentSliceValue = Input[uint3(x,y,0)].rgba;
+            WriteOutput(uint3(x,y,0),currentSliceValue);
+            
+            for(uint z = 1; z < VOLUME_DEPTH;z++)
+            {
+                float4 nextValue = Input[uint3(x,y, z)].rgba;
+                currentSliceValue = AccumulateScattering(currentSliceValue, nextValue);
+                WriteOutput(uint3(x,y, z), currentSliceValue);
+            }
+        }
     }
+    
     //Result[id.xyz] = float4(id.x & id.y, (id.x & 15)/15.0, (id.y & 15)/15.0, 0.0);
 }

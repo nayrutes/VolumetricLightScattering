@@ -61,11 +61,19 @@
         float3 inScattering = scatteringInformation.rgb;
         float transmittance = scatteringInformation.a;
         
+        //(1) transmittance always 0 ?
         float3 finalPixelColor = color.rgb * transmittance.xxx + inScattering;
         
         // Fade value allow you to increase the strength of the effect while the camera gets closer to the custom pass volume
         float f = 1 - abs(_FadeValue * 2 - 1);
-        return float4(color.rgb + f, color.a);
+        //return float4(color.rgb, color.a);
+        
+        //float depthLinear = LinearEyeDepth(depth, _ZBufferParams);// * length(varyings.viewVector);
+        float depthLinear = Linear01Depth(depth, _ZBufferParams);
+        
+        //Maybe Ignore depth if transmittance (1) is correctly calculated?
+        return float4(finalPixelColor.rgb, depthLinear);
+        //return float4(color.rgb, color.a);
     }
 
     ENDHLSL
