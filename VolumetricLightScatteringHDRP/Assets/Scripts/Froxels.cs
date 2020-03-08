@@ -39,6 +39,8 @@ public class Froxels : MonoBehaviour
     private Frustum[] _froxels;
 
     private DebugSlice _debugSlice;
+    private Vector3 froxelLastPositionOrigin;
+    private Matrix4x4 lastFrameWorldToLocal;
     struct Froxel
     {
         public Frustum frustum;
@@ -57,6 +59,9 @@ public class Froxels : MonoBehaviour
         DrawOutlineFrustrum();
         if(enableGenerateFroxelsEveryFrame)
             GenerateFroxels();
+        else
+            OrientFroxels();
+        
         if (enableDebugDraw)
         {
             if (toggleSingleAll)
@@ -104,7 +109,8 @@ public class Froxels : MonoBehaviour
     //Generate Froxels in Unit Cube, Transform them into the View Frustrum
     private void GenerateFroxels()
     {
-        
+        froxelLastPositionOrigin = _camera.transform.position;
+        lastFrameWorldToLocal = _camera.transform.worldToLocalMatrix;
         Matrix4x4 invViewProjMatrix = Matrix4x4.Inverse(_camera.projectionMatrix);
         _froxels = new Frustum[amount.x*amount.y*amount.z];
         
@@ -139,13 +145,11 @@ public class Froxels : MonoBehaviour
                     corners[5] = invViewProjMatrix.MultiplyPoint(forward * inZNear + right*inXFractionRight + up* inYFractionBottom);
                     corners[6] = invViewProjMatrix.MultiplyPoint(forward * inZNear + right*inXFractionLeft + up* inYFractionTop);
                     corners[7] = invViewProjMatrix.MultiplyPoint(forward * inZNear + right*inXFractionRight + up* inYFractionTop);
-                    
-                    //TODO seperate ffrom function and call every frame
-                    for(int index=0; index<corners.Length;index++)
-                    {
 
+                    for (int index = 0; index < corners.Length; index++)
+                    {
                         corners[index].z *= -1;
-                        corners[index] = _camera.transform.localToWorldMatrix.MultiplyPoint(corners[index]) ;
+                        corners[index] = _camera.transform.localToWorldMatrix.MultiplyPoint3x4(corners[index]);
                     }
 
                     frustum.corners = corners;
@@ -168,11 +172,44 @@ public class Froxels : MonoBehaviour
                     //frustum.planes = new[] {left, right, top, bottom, near, far};
 
                     _froxels[k * (amount.x * amount.y) + j * amount.x + i] = frustum;
+                    
+                    //OrientFroxels();
                 }
             }
         }
+        //OrientFroxels();
     }
 
+    void OrientFroxels()
+    {
+        //Matrix4x4 inv = Matrix4x4.Inverse(lastFrameWorldToLocal);
+        Matrix4x4 comb = _camera.transform.localToWorldMatrix * lastFrameWorldToLocal;
+        foreach (Frustum froxel in _froxels)
+        {
+            for(int index=0; index<froxel.corners.Length;index++)
+            {
+                //froxel.corners[index] = lastFrameWorldToLocal.MultiplyPoint(froxel.corners[index]);
+                //froxel.corners[index] = _camera.transform.localToWorldMatrix.MultiplyPoint(froxel.corners[index]) ;
+                froxel.corners[index] = comb.MultiplyPoint3x4(froxel.corners[index]);
+            }
+        }
+
+        lastFrameWorldToLocal = _camera.transform.worldToLocalMatrix;
+    }
+
+    void AdjustFroxelsPosition()
+    {
+        Vector3 moved = _camera.transform.position - froxelLastPositionOrigin;
+        froxelLastPositionOrigin = _camera.transform.position;
+        foreach (Frustum froxel in _froxels)
+        {
+            for(int index=0; index<froxel.corners.Length;index++)
+            {
+                //froxel.corners[index] += moved;
+            }
+        }
+    }
+    
     void DrawFrustum(Frustum f)
     {
         //farLeftBottom, farRightBottom, farLeftTop, farRightTop, nearLeftBottom, nearRightBottom, nearLeftTop, nearRightTop

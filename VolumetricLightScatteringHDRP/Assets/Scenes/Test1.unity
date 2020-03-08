@@ -38,7 +38,7 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 0}
-  m_IndirectSpecularColor: {r: 196.51112, g: 180.7359, b: 265.80438, a: 1}
+  m_IndirectSpecularColor: {r: 196.50209, g: 180.96286, b: 265.9074, a: 1}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
@@ -632,7 +632,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_Profile: {fileID: 11400000, guid: ed73a7fe4de266a4abcb04c3731a8fed, type: 2}
   m_StaticLightingSkyUniqueID: 3
-  m_SkySettings: {fileID: 2130048740}
+  m_SkySettings: {fileID: 2071084450}
   m_SkySettingsFromProfile: {fileID: -7437363794055793452, guid: ed73a7fe4de266a4abcb04c3731a8fed,
     type: 2}
 --- !u!4 &856560287
@@ -1104,13 +1104,13 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1827429891}
-  m_LocalRotation: {x: -0, y: 0.16453846, z: -0, w: 0.9863707}
-  m_LocalPosition: {x: -3.71, y: 1.62, z: -10}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
   m_RootOrder: 0
-  m_LocalEulerAnglesHint: {x: 0, y: 18.941, z: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &1827429896
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1132,10 +1132,10 @@ MonoBehaviour:
   insetValue: {x: 0.1, y: 0.1, z: 0.1, w: 0.1}
   amount: {x: 16, y: 16, z: 256}
   enableDebugDraw: 1
-  drawCorners: 1
-  drawEdges: 0
+  drawCorners: 0
+  drawEdges: 1
   toggleSingleAll: 0
-  singleFroxel: {x: 0, y: 0, z: 0}
+  singleFroxel: {x: 8, y: 8, z: 200}
   enableScatteringCompute: 1
   enableGenerateFroxelsEveryFrame: 0
   depthDistribution:
@@ -1268,7 +1268,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   texture3DToSlice: {fileID: 8400000, guid: 43b0296d965346d48800cfdd278f31d7, type: 2}
   debugRenderTexture: {fileID: 1804534081}
-  size: 0.615
+  size: 0.24
   slice: 0.278
   debugMaterial: {fileID: 2100000, guid: fcb86e3c7803a1b4fada1d5a0e28cea5, type: 2}
   slicer: {fileID: 7200000, guid: f3ee15b372478434eb21fdcbf0f0e07c, type: 3}
@@ -1307,7 +1307,7 @@ MonoBehaviour:
         materialPassIndex: 0
         materialPassName: Custom Pass 0
         fetchColorBuffer: 0
---- !u!114 &2130048740
+--- !u!114 &2071084450
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
