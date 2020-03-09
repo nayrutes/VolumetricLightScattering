@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using UnityEditor;
 using UnityEngine;
@@ -32,7 +33,6 @@ public class Froxels : MonoBehaviour
     public bool enableScatteringCompute = true;
     public bool enableGenerateFroxelsEveryFrame = true;
     
-    [Header("unused")]
     [SerializeField] private AnimationCurve depthDistribution;
     
     private Camera _camera;
@@ -51,14 +51,16 @@ public class Froxels : MonoBehaviour
         _camera = GetComponent<Camera>();
         _debugSlice = FindObjectOfType<DebugSlice>();
         _debugSlice.texture3DToSlice = scatteringOutput;
-        GenerateFroxels();
+        //GenerateFroxels();
+        GenerateFroxelsInWorldSpace();
     }
     
     void Update()
     {
         DrawOutlineFrustrum();
         if(enableGenerateFroxelsEveryFrame)
-            GenerateFroxels();
+            //GenerateFroxels();
+            GenerateFroxelsInWorldSpace();
         else
             OrientFroxels();
         
@@ -105,20 +107,176 @@ public class Froxels : MonoBehaviour
 //            DrawSphere(points[i],0.2f,Color.green);
 //        }
     }
+
+    private void GenerateFroxelsInWorldSpace()
+    {
+        lastFrameWorldToLocal = _camera.transform.worldToLocalMatrix;
+        _froxels = new Frustum[amount.x*amount.y*amount.z];
+        Vector3[] fC = new Vector3[4];
+        Vector3[] nC = new Vector3[4];
+        _camera.CalculateFrustumCorners(new Rect(0, 0, 1, 1), _camera.farClipPlane, Camera.MonoOrStereoscopicEye.Mono, fC);
+        _camera.CalculateFrustumCorners(new Rect(0, 0, 1, 1), _camera.nearClipPlane, Camera.MonoOrStereoscopicEye.Mono, nC);
+        //Debug.Log(String.Join("",fC.ToList().ConvertAll(i => i.ToString()).ToArray()));
+        Vector3[] points = new Vector3[(amount.x+1)*(amount.y+1)*(amount.z+1)];
+        for (int x = 0; x <= amount.x; x++)
+        {
+            float xl = Mathf.InverseLerp(0, amount.x, x);
+            
+            for (int y = 0; y <= amount.y; y++)
+            {
+                float yl = Mathf.InverseLerp(0, amount.y, y);
+                for (int z = 0; z <= amount.z; z++)
+                {
+                    float zl = Mathf.InverseLerp(0, amount.z, z);
+                    zl = CreateNonLinear(zl);
+                    Vector3 point = InterP(new Vector3(xl, yl, zl), nC, fC);
+
+                    point = _camera.transform.localToWorldMatrix.MultiplyPoint3x4(point);
+                    points[z * ((amount.x+1) * (amount.y+1)) + y * (amount.x+1) + x] = point;
+                }
+            }
+        }
+        //Debug.Log(String.Join("",points.ToList().ConvertAll(i => i.ToString()).ToArray()));
+//        foreach (Vector3 point in points)
+//        {
+//            DrawSphere(point,0.5f,Color.magenta);
+//        }
+        
+        for (int x = 0; x < amount.x; x++)
+        {
+            for (int y = 0; y < amount.y; y++)
+            {
+                for (int z = 0; z < amount.z; z++)
+                {
+//                    corners[0] = (forward * inZFar + right*inXFractionLeft + up* inYFractionBottom);
+//                    corners[1] = (forward * inZFar + right*inXFractionRight + up* inYFractionBottom);
+//                    corners[2] = (forward * inZFar + right*inXFractionLeft + up* inYFractionTop);
+//                    corners[3] = (forward * inZFar + right*inXFractionRight + up* inYFractionTop);
+//                    corners[4] = (forward * inZNear + right*inXFractionLeft + up* inYFractionBottom);
+//                    corners[5] = (forward * inZNear + right*inXFractionRight + up* inYFractionBottom);
+//                    corners[6] = (forward * inZNear + right*inXFractionLeft + up* inYFractionTop);
+//                    corners[7] = (forward * inZNear + right*inXFractionRight + up* inYFractionTop);
+                    
+                    //lbf, rbf, ltf, rtf, lbn, rbn, ltn, rtn,
+                    Vector3[] corners = new Vector3[]
+                    {
+                        points[(z+1) * ((amount.x+1) * (amount.y+1)) + y * (amount.x+1) + x],
+                        points[(z+1) * ((amount.x+1) * (amount.y+1)) + y * (amount.x+1) + (x+1)],
+                        points[(z+1) * ((amount.x+1) * (amount.y+1)) + (y+1) * (amount.x+1) + x],
+                        points[(z+1) * ((amount.x+1) * (amount.y+1)) + (y+1) * (amount.x+1) + (x+1)],
+                        points[z * ((amount.x+1) * (amount.y+1)) + y * (amount.x+1) + x],
+                        points[z * ((amount.x+1) * (amount.y+1)) + y * (amount.x+1) + (x+1)],
+                        points[z * ((amount.x+1) * (amount.y+1)) + (y+1) * (amount.x+1) + x],
+                        points[z * ((amount.x+1) * (amount.y+1)) + (y+1) * (amount.x+1) + (x+1)]
+                    };
+                    Frustum f = GenerateFrustum(corners);
+                    _froxels[z * ((amount.x) * (amount.y)) + y * (amount.x) + x] = f;
+                }
+            }
+        }
+    }
+
+    private Vector3 InterP(Vector3 iL, Vector3[] nPC, Vector3[] fPC)
+    {
+        Vector3 onXNear1 = Vector3.Lerp(nPC[0], nPC[3], iL.x);
+        Vector3 onXNear2 = Vector3.Lerp(nPC[1], nPC[2], iL.x);
+        Vector3 onYNear = Vector3.Lerp(onXNear1, onXNear2, iL.y);
+        
+        Vector3 onXFar1 = Vector3.Lerp(fPC[0], fPC[3], iL.x);
+        Vector3 onXFar2 = Vector3.Lerp(fPC[1], fPC[2], iL.x);
+        Vector3 onYFar = Vector3.Lerp(onXFar1, onXFar2, iL.y);
+
+        return Vector3.Lerp(onYNear, onYFar, iL.z);
+    }
+
+    private Frustum GenerateFrustum(Vector3[] corners)
+    {
+        Frustum f = new Frustum();
+        f.corners = corners;
+        return f;
+    }
     
     //Generate Froxels in Unit Cube, Transform them into the View Frustrum
     private void GenerateFroxels()
     {
         froxelLastPositionOrigin = _camera.transform.position;
         lastFrameWorldToLocal = _camera.transform.worldToLocalMatrix;
-        Matrix4x4 invViewProjMatrix = Matrix4x4.Inverse(_camera.projectionMatrix);
+        
         _froxels = new Frustum[amount.x*amount.y*amount.z];
         
+        //Froxelize Unitcube
         for (int k = 0; k < amount.z; k++)
         {
-            float inZFar = ConvertRange01ToMinus11(((1.0f / amount.z) * k));
-            float inZNear = ConvertRange01ToMinus11(((1.0f / amount.z) * (k+1)));
+            float inZFar = ((1.0f / amount.z) * k);
+            float inZNear = ((1.0f / amount.z) * (k+1));
             
+            //reverse projection non-linear depth before applying projMatrix
+            float f = _camera.farClipPlane;
+            float n = _camera.nearClipPlane;
+            float ratio = f / n;
+
+//            inZNear = 1-Mathf.Pow((1 - inZNear),2);
+//            inZFar = 1-Mathf.Pow((1 - inZFar),2);
+
+            //inZNear = 1-Mathf.Pow((inZNear),2);
+            //inZFar = 1-Mathf.Pow((inZFar),2);
+
+//            inZNear = -inZNear;
+//            inZFar = -inZFar;
+            //if(inZNear>0)
+                inZNear = (1-1 / (inZNear));
+            //else
+            //{
+            //    inZNear = 1 - inZNear;
+            //}
+            //if(inZFar>0)
+                inZFar = (1-1 / (inZFar));
+
+                //inZNear = ((1 / (inZNear - 2)) + 1);
+                //inZFar = ((1 / (inZFar - 2)) + 1);
+            //else
+            //{
+            //    inZFar = 1 - inZFar;
+            //}
+
+            //inZNear = ((f-n) / (n*f) * (inZNear) - (1 / n));
+            //inZFar = ((n-f) / (n*f) * (inZFar) - (1 / n));
+            
+            //inZNear = (n-n*inZNear)/(f*inZNear - n*inZNear);
+            //inZFar = (n-n*inZFar)/(f*inZFar - n*inZFar);
+
+            //inZNear = 1 / (1 - inZNear);
+            //inZFar = 1 / (1 - inZFar);
+            
+            inZFar = ConvertRange01ToMinus11(inZFar);
+            inZNear = ConvertRange01ToMinus11(inZNear);
+            
+            //inZNear = (2-1 / (inZNear));
+            //inZFar = (2-1 / (inZFar));
+            
+//            inZNear = -inZNear;
+//            inZFar = -inZFar;
+            
+            //inZNear = 1 / inZNear;
+            //inZFar = 1 / inZFar;
+            
+            //inZNear = (f + n) / (f - n) + (2 * n * f) / ((f - n) * inZNear);
+            //inZFar = (f + n) / (f - n) + (2 * n * f) / ((f - n) * inZFar);
+            
+            //inZNear = 1/(-((f + n) / (f - n)) * inZNear - ((2 * f * n) / (f - n)) / -inZNear);
+            //inZFar = 1/(-((f + n) / (f - n)) * inZFar - ((2 * f * n) / (f - n)) / -inZFar);
+            
+            //inZNear = ((n-f) / (n*f) * inZNear - (1 / n));
+            //inZFar = ((n-f) / (n*f) * inZFar - (1 / n));
+
+            //close
+            //inZNear = 1/((n - f*inZNear)/(inZNear*(n-f)));
+            //inZFar = 1/((n - f*inZFar)/(inZFar*(n-f)));
+
+            
+            
+            //inZNear = ((n-f) / (n) * inZNear + (f / n));
+            //inZFar = ((n-f) / (n) * inZFar + (f / n));
             for (int j = 0; j < amount.y; j++)
             {
                 float inY = 1;
@@ -137,20 +295,34 @@ public class Froxels : MonoBehaviour
                     var forward = Vector3.forward;
                     var right = Vector3.right;
                     var up = Vector3.up;
-                    corners[0] = invViewProjMatrix.MultiplyPoint(forward * inZFar + right*inXFractionLeft + up* inYFractionBottom);
-                    corners[1] = invViewProjMatrix.MultiplyPoint(forward * inZFar + right*inXFractionRight + up* inYFractionBottom);
-                    corners[2] = invViewProjMatrix.MultiplyPoint(forward * inZFar + right*inXFractionLeft + up* inYFractionTop);
-                    corners[3] = invViewProjMatrix.MultiplyPoint(forward * inZFar + right*inXFractionRight + up* inYFractionTop);
-                    corners[4] = invViewProjMatrix.MultiplyPoint(forward * inZNear + right*inXFractionLeft + up* inYFractionBottom);
-                    corners[5] = invViewProjMatrix.MultiplyPoint(forward * inZNear + right*inXFractionRight + up* inYFractionBottom);
-                    corners[6] = invViewProjMatrix.MultiplyPoint(forward * inZNear + right*inXFractionLeft + up* inYFractionTop);
-                    corners[7] = invViewProjMatrix.MultiplyPoint(forward * inZNear + right*inXFractionRight + up* inYFractionTop);
+                    corners[0] = (forward * inZFar + right*inXFractionLeft + up* inYFractionBottom);
+                    corners[1] = (forward * inZFar + right*inXFractionRight + up* inYFractionBottom);
+                    corners[2] = (forward * inZFar + right*inXFractionLeft + up* inYFractionTop);
+                    corners[3] = (forward * inZFar + right*inXFractionRight + up* inYFractionTop);
+                    corners[4] = (forward * inZNear + right*inXFractionLeft + up* inYFractionBottom);
+                    corners[5] = (forward * inZNear + right*inXFractionRight + up* inYFractionBottom);
+                    corners[6] = (forward * inZNear + right*inXFractionLeft + up* inYFractionTop);
+                    corners[7] = (forward * inZNear + right*inXFractionRight + up* inYFractionTop);
 
-                    for (int index = 0; index < corners.Length; index++)
-                    {
-                        corners[index].z *= -1;
-                        corners[index] = _camera.transform.localToWorldMatrix.MultiplyPoint3x4(corners[index]);
-                    }
+//                    corners[0] = (forward * inZFar);
+//                    corners[1] = (forward * inZFar);
+//                    corners[2] = (forward * inZFar);
+//                    corners[3] = (forward * inZFar + right*inXFractionRight + up* inYFractionTop);
+//                    corners[4] = (forward * inZNear + right*inXFractionLeft + up* inYFractionBottom);
+//                    corners[5] = (forward * inZNear + right*inXFractionRight + up* inYFractionBottom);
+//                    corners[6] = (forward * inZNear + right*inXFractionLeft + up* inYFractionTop);
+//                    corners[7] = (forward * inZNear + right*inXFractionRight + up* inYFractionTop);
+                    
+//                    for (int index = 0; index < corners.Length; index++)
+//                    {
+//                        //corners[index].z = -_camera.worldToCameraMatrix.MultiplyPoint3x4(corners[index]).z;
+//                        corners[index].z *= -1;
+////                        corners[index].z =
+////                            (1 / (((_camera.farClipPlane - _camera.nearClipPlane) /
+////                                   (_camera.nearClipPlane * _camera.farClipPlane)) * corners[index].z -
+////                                  (1 / _camera.nearClipPlane))) * _camera.farClipPlane;
+//                        corners[index] = _camera.transform.localToWorldMatrix.MultiplyPoint3x4(corners[index]);
+//                    }
 
                     frustum.corners = corners;
                     //DrawFrustum(frustum);
@@ -178,8 +350,71 @@ public class Froxels : MonoBehaviour
             }
         }
         //OrientFroxels();
+        ProjectUnitCubeToFrustrum();
     }
 
+    void ProjectUnitCubeToFrustrum()
+    {
+        //TODO check if better use Non-Jittered Projection matrix https://docs.unity3d.com/ScriptReference/Camera-nonJitteredProjectionMatrix.html
+        Matrix4x4 invViewProjMatrix = _camera.projectionMatrix.inverse;
+        var projectionMatrix = _camera.projectionMatrix;
+        var m = _camera.worldToCameraMatrix;
+        Matrix4x4 customProjMatrix = new Matrix4x4();//s = projectionMatrix;
+        customProjMatrix.m00 = projectionMatrix.m00;
+        customProjMatrix.m11 = projectionMatrix.m11;
+        customProjMatrix.m32 = projectionMatrix.m32;
+        //customProjMatrix.m33 = projectionMatrix.m33;
+        customProjMatrix.m23 = projectionMatrix.m23;
+        //customProjMatrix.
+        foreach (Frustum froxel in _froxels)
+        {
+            float f = _camera.farClipPlane;
+            float n = _camera.nearClipPlane;
+            float nTmp = n;
+            
+            for(int index=0; index<froxel.corners.Length;index++)
+            {
+                Vector3 p = froxel.corners[index];
+                //p = new Vector3(p.x,p.y,1-p.z);
+                //froxel.corners[index] = invViewProjMatrix.MultiplyPoint(p);
+                froxel.corners[index] = projectionMatrix.inverse.MultiplyPoint(p);
+//                if(index>=4)
+//                    froxel.corners[index] *= -1;
+//                if(index==0)
+//                    nTmp = froxel.corners[0].z;
+                froxel.corners[index].z *= -1;
+                //froxel.corners[index] *= ((f-n) / (n*f) * (1 -froxel.corners[index].z) - (1 / n));
+                //froxel.corners[index] *= (n-n*froxel.corners[index].z)/(f*froxel.corners[index].z - n*froxel.corners[index].z);
+                //froxel.corners[index] *= -1;
+                //froxel.corners[index] = ((froxel.corners[index] + new Vector3(0, 0, n))) * f / n;// + new Vector3(0,0,f);
+                //scaling and back right, only front? small offset
+                //froxel.corners[index] = (froxel.corners[index]) * (f / n);// - froxel.corners[index] * (f-n)/(f+n);
+                //not working correctly
+                //froxel.corners[index] = new Vector3(0,0,n)+ (f - n) / n * froxel.corners[index];
+                //deviding shift into seperate steps
+                float a = 0;
+                float b = n;
+                float c = n;
+                float d = f;
+                
+//                froxel.corners[index].z = froxel.corners[index].z - new Vector3(0, 0, a).z;
+//                froxel.corners[index].z = froxel.corners[index].z / (b-a);
+////                //changing scaling?
+//                froxel.corners[index].z = froxel.corners[index].z *(d-c);
+//                froxel.corners[index].z = froxel.corners[index].z+new Vector3(0,0,c).z;
+                
+                //froxel.corners[index].z = (1 / (((f - n) /(n * f)) * froxel.corners[index].z -(1 / n)));
+                
+                //froxel.corners[index] = (froxel.corners[index] * f / n)- (new Vector3(0, 0, n)*n/f);
+                
+                //froxel.corners[index] -= new Vector3(0,0,-1);
+                //froxel.corners[index] /= -(f + n) / (f - n);
+                //froxel.corners[index] -= new Vector3(0,0,-(2 * f * n) / (f - n));
+                froxel.corners[index] = _camera.transform.localToWorldMatrix.MultiplyPoint3x4(froxel.corners[index]);
+            }
+        }
+    }
+    
     void OrientFroxels()
     {
         //Matrix4x4 inv = Matrix4x4.Inverse(lastFrameWorldToLocal);
@@ -233,10 +468,24 @@ public class Froxels : MonoBehaviour
 
         if (drawCorners)
         {
-            foreach (Vector3 corner in f.corners)
+//            foreach (Vector3 corner in f.corners)
+//            {
+//                DrawSphere(corner,0.1f,Color.magenta);
+//            }
+            for (int i = 0; i < f.corners.Length; i++ )
             {
-                DrawSphere(corner,0.1f,Color.magenta);
+                //Color c = Color.black;
+                
             }
+            //lbf, rbf, ltf, rtf, lbn, rbn, ltn, rtn,
+            DrawSphere(f.corners[0],0.2f,new Color(0,0,1));
+            DrawSphere(f.corners[1],0.2f,new Color(1,0,1));
+            DrawSphere(f.corners[2],0.2f,new Color(0,1,1));
+            DrawSphere(f.corners[3],0.2f,new Color(1,1,1));
+            DrawSphere(f.corners[4],0.2f,new Color(0,0,0));
+            DrawSphere(f.corners[5],0.2f,new Color(1,0,0));
+            DrawSphere(f.corners[6],0.2f,new Color(0,1,0));
+            DrawSphere(f.corners[7],0.2f,new Color(1,1,0));
         }
     }
 
@@ -245,17 +494,10 @@ public class Froxels : MonoBehaviour
         return value * 2 -1;
     }
     
-    private float ConvertToNonLinear(float value)
+    private float CreateNonLinear(float value)
     {
-        //if (value == 0) value = 0.00001f;
-        //return near*(1.0f/value) +far;
-        //return (1.0f / value);
-        //return (((1.0f / value* (far-near)) - near) / amount.z);
-        //return (1.0f / value) * amount.z - near;
-        //return Mathf.Log(value) * far;
-        //return ((1.0f / (value + 1.0f)))*(far-near);
-        //return depthDistribution.Evaluate(value)*(far-near);
-        return depthDistribution.Evaluate(value);
+        float result = depthDistribution.Evaluate(value);
+        return result;
     }
     
     void DrawOutlineFrustrum()
