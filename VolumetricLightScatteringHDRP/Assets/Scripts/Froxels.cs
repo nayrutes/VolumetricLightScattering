@@ -478,14 +478,14 @@ public class Froxels : MonoBehaviour
                 
             }
             //lbf, rbf, ltf, rtf, lbn, rbn, ltn, rtn,
-            DrawSphere(f.corners[0],0.2f,new Color(0,0,1));
-            DrawSphere(f.corners[1],0.2f,new Color(1,0,1));
-            DrawSphere(f.corners[2],0.2f,new Color(0,1,1));
-            DrawSphere(f.corners[3],0.2f,new Color(1,1,1));
-            DrawSphere(f.corners[4],0.2f,new Color(0,0,0));
-            DrawSphere(f.corners[5],0.2f,new Color(1,0,0));
-            DrawSphere(f.corners[6],0.2f,new Color(0,1,0));
-            DrawSphere(f.corners[7],0.2f,new Color(1,1,0));
+            DrawPointCross(f.corners[0],0.2f,new Color(0,0,1));
+            DrawPointCross(f.corners[1],0.2f,new Color(1,0,1));
+            DrawPointCross(f.corners[2],0.2f,new Color(0,1,1));
+            DrawPointCross(f.corners[3],0.2f,new Color(1,1,1));
+            DrawPointCross(f.corners[4],0.2f,new Color(0,0,0));
+            DrawPointCross(f.corners[5],0.2f,new Color(1,0,0));
+            DrawPointCross(f.corners[6],0.2f,new Color(0,1,0));
+            DrawPointCross(f.corners[7],0.2f,new Color(1,1,0));
         }
     }
 
@@ -551,7 +551,7 @@ public class Froxels : MonoBehaviour
 //    }
 
 
-    public static void DrawSphere (Vector3 centre, float radius, Color color) {
+    public static void DrawPointCross (Vector3 centre, float radius, Color color) {
         Debug.DrawRay(new Vector3(centre.x-radius,centre.y,centre.z), new  Vector3(radius*2 ,0,0), color);
         Debug.DrawRay(new Vector3(centre.x,centre.y-radius,centre.z), new  Vector3(0 ,radius*2,0), color);
         Debug.DrawRay(new Vector3(centre.x,centre.y,centre.z-radius), new  Vector3(0 ,0,radius*2), color);
