@@ -17,10 +17,12 @@ public class Froxels : MonoBehaviour
 
     [SerializeField] private ComputeShader scatteringCompute;
     [SerializeField] private RenderTexture scatteringInput;
+    [SerializeField] private RenderTexture scatteringInputWithShadows;
     [SerializeField] private RenderTexture scatteringOutput;
     [SerializeField] private Material renderMaterial;
     [SerializeField] private Material fullScreenPassHdrpMaterial;
     [SerializeField] private Vector4 insetValue;
+    [SerializeField] private ShadowManager shadowManager;
     
     [Header("inX, inY, inZ")]
     [SerializeField] private Vector3Int amount;
@@ -32,6 +34,7 @@ public class Froxels : MonoBehaviour
     public Vector3Int singleFroxel;
     public bool enableScatteringCompute = true;
     public bool enableGenerateFroxelsEveryFrame = true;
+    public bool enableCalculateShadows = true;
     
     [SerializeField] private AnimationCurve depthDistribution;
     
@@ -78,8 +81,19 @@ public class Froxels : MonoBehaviour
                 DrawFrustum(_froxels[singleFroxel.z * (amount.x * amount.y) + singleFroxel.y * amount.x + singleFroxel.x]);
             }
         }
+
+        if (enableCalculateShadows)
+        {
+            CalculateShadows();
+        }
+        else
+        {
+            scatteringInputWithShadows = scatteringInput;
+        }
         if(enableScatteringCompute)
             RunScatteringCompute();
+        
+        
         
         fullScreenPassHdrpMaterial.SetVector("_Amount", new Vector4(amount.x,amount.y,amount.z,0));
         fullScreenPassHdrpMaterial.SetTexture("VolumetricFogSampler",scatteringOutput);
@@ -148,15 +162,6 @@ public class Froxels : MonoBehaviour
             {
                 for (int z = 0; z < amount.z; z++)
                 {
-//                    corners[0] = (forward * inZFar + right*inXFractionLeft + up* inYFractionBottom);
-//                    corners[1] = (forward * inZFar + right*inXFractionRight + up* inYFractionBottom);
-//                    corners[2] = (forward * inZFar + right*inXFractionLeft + up* inYFractionTop);
-//                    corners[3] = (forward * inZFar + right*inXFractionRight + up* inYFractionTop);
-//                    corners[4] = (forward * inZNear + right*inXFractionLeft + up* inYFractionBottom);
-//                    corners[5] = (forward * inZNear + right*inXFractionRight + up* inYFractionBottom);
-//                    corners[6] = (forward * inZNear + right*inXFractionLeft + up* inYFractionTop);
-//                    corners[7] = (forward * inZNear + right*inXFractionRight + up* inYFractionTop);
-                    
                     //lbf, rbf, ltf, rtf, lbn, rbn, ltn, rtn,
                     Vector3[] corners = new Vector3[]
                     {
@@ -523,20 +528,22 @@ public class Froxels : MonoBehaviour
 //        textureOutput.enableRandomWrite = true;
 
 
-        scatteringInput.Release();
-        scatteringOutput.Release();
-        scatteringInput.width = scatteringOutput.width = amount.x;
-        scatteringInput.height = scatteringOutput.height = amount.y;
-        scatteringInput.volumeDepth = scatteringOutput.volumeDepth = amount.z;
-        scatteringInput.enableRandomWrite = true;
-        scatteringOutput.enableRandomWrite = true;
-        scatteringInput.Create();
-        scatteringOutput.Create();
+//        scatteringInput.Release();
+//        scatteringOutput.Release();
+//        scatteringInput.width = scatteringOutput.width = amount.x;
+//        scatteringInput.height = scatteringOutput.height = amount.y;
+//        scatteringInput.volumeDepth = scatteringOutput.volumeDepth = amount.z;
+//        scatteringInput.enableRandomWrite = true;
+//        scatteringOutput.enableRandomWrite = true;
+//        scatteringInput.Create();
+//        scatteringOutput.Create();
+        //AdjustRenderTexture(scatteringInput);
+        AdjustRenderTexture(scatteringOutput);
         
-        scatteringCompute.SetTexture(0, "Input",scatteringInput);
+        scatteringCompute.SetTexture(0, "Input",scatteringInputWithShadows);
         scatteringCompute.SetTexture(0, "Result",scatteringOutput);
         scatteringCompute.SetVector("insetValue",insetValue);
-        scatteringCompute.SetVector("size", new Vector4(scatteringInput.width,scatteringInput.height,scatteringInput.volumeDepth,0));
+        scatteringCompute.SetVector("size", new Vector4(scatteringInputWithShadows.width,scatteringInputWithShadows.height,scatteringInputWithShadows.volumeDepth,0));
         
         //int threadGroupsX = amount.z / 256;
         scatteringCompute.Dispatch(0, 1,1,1);
@@ -550,10 +557,46 @@ public class Froxels : MonoBehaviour
 //        Graphics.Blit(src,dest,renderMaterial);
 //    }
 
+    private void CalculateShadows()
+    {
+        //TODO prepare rendertextures
+        AdjustRenderTexture(scatteringInputWithShadows);
+        AdjustRenderTexture(scatteringInput);
+        
+        Vector3[] centers = new Vector3[_froxels.Length];
+        for (var i = 0; i < _froxels.Length; i++)
+        {
+            centers[i] = CalculateCenter(_froxels[i]);
+        }
+        shadowManager.CalculateShadows(scatteringInput, scatteringInputWithShadows, centers);
+    }
+
 
     public static void DrawPointCross (Vector3 centre, float radius, Color color) {
         Debug.DrawRay(new Vector3(centre.x-radius,centre.y,centre.z), new  Vector3(radius*2 ,0,0), color);
         Debug.DrawRay(new Vector3(centre.x,centre.y-radius,centre.z), new  Vector3(0 ,radius*2,0), color);
         Debug.DrawRay(new Vector3(centre.x,centre.y,centre.z-radius), new  Vector3(0 ,0,radius*2), color);
+    }
+
+    public Vector3 CalculateCenter(Frustum f)
+    {
+        Vector3 result = new Vector3(0,0,0);
+        foreach (Vector3 corner in f.corners)
+        {
+            result += corner;
+        }
+
+        result /= 8;
+        return result;
+    }
+
+    private void AdjustRenderTexture(RenderTexture r)
+    {
+        r.Release();
+        r.width = amount.x;
+        r.height = amount.y;
+        r.volumeDepth = amount.z;
+        r.enableRandomWrite = true;
+        r.Create();
     }
 }

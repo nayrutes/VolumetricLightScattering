@@ -5,11 +5,42 @@
 // with cs.SetTexture
 RWTexture3D<float4> Input;
 RWTexture3D<float4> Result;
+Texture2D<float4> LightDepth;
+SamplerState samplerLightDepth;
+float4x4 vp;
+float4x4 convertTo01;
+StructuredBuffer<float4> points;
+float4 Input_TexelSize;
 
-[numthreads(8,8,1)]
+
+//singleFroxel.z * (amount.x * amount.y) + singleFroxel.y * amount.x + singleFroxel.x
+uint flat(uint3 id)
+{
+    return id.z * (Input_TexelSize.x * Input_TexelSize.y) + id.y * Input_TexelSize.x + id.x;
+}
+
+[numthreads(8,8,16)]
 void CSMain (uint3 id : SV_DispatchThreadID)
 {
     // TODO: insert actual code here!
     //Calculate Light influence on voxel (sample shadowmap?)
 //    Result[id.xy] = float4(id.x & id.y, (id.x & 15)/15.0, (id.y & 15)/15.0, 0.0);
+    
+    //RemoveLater?
+    Input[id] = float4(1,1,1,0.1);
+    //uint index = flat(id);
+    //float4 p = points[index];
+    
+    float4 pointProjected = mul(vp, points[flat(id)]);
+    pointProjected = pointProjected/pointProjected.w;
+    pointProjected = mul(convertTo01,pointProjected);
+    if(LightDepth.SampleLevel(samplerLightDepth,pointProjected.xy,0).r< pointProjected.z)
+    {
+        Result[id] = Input[id];
+    }else{
+        Result[id] = float4(0,0,0,0);
+    }
+    
+    //Result[id] = LightDepth.SampleLevel(samplerLightDepth,pointProjected.xy,0).a;
+    
 }

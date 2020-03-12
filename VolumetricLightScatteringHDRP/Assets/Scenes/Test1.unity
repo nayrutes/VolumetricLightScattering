@@ -261,6 +261,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c8382e22fbccdfe4089dd0c299ea7558, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  cam: {fileID: 0}
   depthTexture: {fileID: 0}
   pointInScene: {x: 0, y: 5, z: 0}
 --- !u!114 &63944793
@@ -840,7 +841,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_Profile: {fileID: 11400000, guid: ed73a7fe4de266a4abcb04c3731a8fed, type: 2}
   m_StaticLightingSkyUniqueID: 3
-  m_SkySettings: {fileID: 879966607}
+  m_SkySettings: {fileID: 945749176}
   m_SkySettingsFromProfile: {fileID: -7437363794055793452, guid: ed73a7fe4de266a4abcb04c3731a8fed,
     type: 2}
 --- !u!4 &856560287
@@ -857,76 +858,6 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 5
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &879966607
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a81bcacc415a1f743bfdf703afc52027, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  active: 1
-  m_AdvancedMode: 0
-  rotation:
-    m_OverrideState: 0
-    m_Value: 0
-    min: 0
-    max: 360
-  skyIntensityMode:
-    m_OverrideState: 0
-    m_Value: 0
-  exposure:
-    m_OverrideState: 0
-    m_Value: 8.5
-  multiplier:
-    m_OverrideState: 0
-    m_Value: 1
-    min: 0
-  upperHemisphereLuxValue:
-    m_OverrideState: 0
-    m_Value: 1
-    min: 0
-  upperHemisphereLuxColor:
-    m_OverrideState: 0
-    m_Value: {x: 0, y: 0, z: 0}
-  desiredLuxValue:
-    m_OverrideState: 0
-    m_Value: 20000
-  updateMode:
-    m_OverrideState: 0
-    m_Value: 2
-  updatePeriod:
-    m_OverrideState: 0
-    m_Value: 1
-    min: 0
-  includeSunInBaking:
-    m_OverrideState: 0
-    m_Value: 0
-  top:
-    m_OverrideState: 0
-    m_Value: {r: 1, g: 0, b: 0.5281062, a: 1}
-    hdr: 1
-    showAlpha: 0
-    showEyeDropper: 1
-  middle:
-    m_OverrideState: 0
-    m_Value: {r: 0.3, g: 0.7, b: 1, a: 1}
-    hdr: 1
-    showAlpha: 0
-    showEyeDropper: 1
-  bottom:
-    m_OverrideState: 0
-    m_Value: {r: 1, g: 1, b: 1, a: 1}
-    hdr: 1
-    showAlpha: 0
-    showEyeDropper: 1
-  gradientDiffusion:
-    m_OverrideState: 0
-    m_Value: 1
 --- !u!1 &880210049
 GameObject:
   m_ObjectHideFlags: 0
@@ -1020,6 +951,76 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 3
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &945749176
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a81bcacc415a1f743bfdf703afc52027, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  active: 1
+  m_AdvancedMode: 0
+  rotation:
+    m_OverrideState: 0
+    m_Value: 0
+    min: 0
+    max: 360
+  skyIntensityMode:
+    m_OverrideState: 0
+    m_Value: 0
+  exposure:
+    m_OverrideState: 0
+    m_Value: 8.5
+  multiplier:
+    m_OverrideState: 0
+    m_Value: 1
+    min: 0
+  upperHemisphereLuxValue:
+    m_OverrideState: 0
+    m_Value: 1
+    min: 0
+  upperHemisphereLuxColor:
+    m_OverrideState: 0
+    m_Value: {x: 0, y: 0, z: 0}
+  desiredLuxValue:
+    m_OverrideState: 0
+    m_Value: 20000
+  updateMode:
+    m_OverrideState: 0
+    m_Value: 2
+  updatePeriod:
+    m_OverrideState: 0
+    m_Value: 1
+    min: 0
+  includeSunInBaking:
+    m_OverrideState: 0
+    m_Value: 0
+  top:
+    m_OverrideState: 0
+    m_Value: {r: 1, g: 0, b: 0.5281062, a: 1}
+    hdr: 1
+    showAlpha: 0
+    showEyeDropper: 1
+  middle:
+    m_OverrideState: 0
+    m_Value: {r: 0.3, g: 0.7, b: 1, a: 1}
+    hdr: 1
+    showAlpha: 0
+    showEyeDropper: 1
+  bottom:
+    m_OverrideState: 0
+    m_Value: {r: 1, g: 1, b: 1, a: 1}
+    hdr: 1
+    showAlpha: 0
+    showEyeDropper: 1
+  gradientDiffusion:
+    m_OverrideState: 0
+    m_Value: 1
 --- !u!1 &1040089003
 GameObject:
   m_ObjectHideFlags: 0
@@ -1403,19 +1404,23 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   scatteringCompute: {fileID: 7200000, guid: 60b11c5821d9e4044bbc4cc460b7fbab, type: 3}
   scatteringInput: {fileID: 8400000, guid: e632a3fb9edcb6f4082986af50a25dc3, type: 2}
+  scatteringInputWithShadows: {fileID: 8400000, guid: 9cc81b3623d2dd249a8414ff9da97570,
+    type: 2}
   scatteringOutput: {fileID: 8400000, guid: 43b0296d965346d48800cfdd278f31d7, type: 2}
   renderMaterial: {fileID: 2100000, guid: 02ec965bf3bcdde4e8aad06e684ce7e1, type: 2}
   fullScreenPassHdrpMaterial: {fileID: 2100000, guid: 8c93a2a7e235b7f4c8dc98662191293b,
     type: 2}
   insetValue: {x: 0.1, y: 0.1, z: 0.1, w: 0.1}
+  shadowManager: {fileID: 1896242501}
   amount: {x: 16, y: 16, z: 32}
   enableDebugDraw: 0
   drawCorners: 0
   drawEdges: 1
   toggleSingleAll: 1
   singleFroxel: {x: 0, y: 0, z: 0}
-  enableScatteringCompute: 0
+  enableScatteringCompute: 1
   enableGenerateFroxelsEveryFrame: 0
+  enableCalculateShadows: 1
   depthDistribution:
     serializedVersion: 2
     m_Curve:
@@ -1547,7 +1552,7 @@ MonoBehaviour:
   texture3DToSlice: {fileID: 8400000, guid: 43b0296d965346d48800cfdd278f31d7, type: 2}
   debugRenderTexture: {fileID: 1804534081}
   size: 0.24
-  slice: 0.278
+  slice: 0
   debugMaterial: {fileID: 2100000, guid: fcb86e3c7803a1b4fada1d5a0e28cea5, type: 2}
   slicer: {fileID: 7200000, guid: f3ee15b372478434eb21fdcbf0f0e07c, type: 3}
 --- !u!114 &1827429900
@@ -1585,6 +1590,51 @@ MonoBehaviour:
         materialPassIndex: 0
         materialPassName: Custom Pass 0
         fetchColorBuffer: 0
+--- !u!1 &1896242500
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1896242502}
+  - component: {fileID: 1896242501}
+  m_Layer: 0
+  m_Name: ShadowManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1896242501
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1896242500}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e0f16374229855a4faeea5a5a7e0c38f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  lightCamera: {fileID: 63944792}
+  lightAccumulation: {fileID: 7200000, guid: dcf7a0e4d5179254e98e537371e26b1b, type: 3}
+--- !u!4 &1896242502
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1896242500}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 10
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1997149466
 GameObject:
   m_ObjectHideFlags: 0

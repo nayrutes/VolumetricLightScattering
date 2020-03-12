@@ -45,7 +45,7 @@ void CSMain (uint3 id : SV_DispatchThreadID)
         //float4 insetValue = float4(0.5,0.5,0.5,0.5);
     //    Input[uint3(id.xy,d)] = insetValue;
     //}
-    Insert();
+    //Insert();
     
     //actual calculation
     for (uint x=0; x<size.x; x++){

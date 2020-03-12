@@ -4,13 +4,13 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
 
-public class ShadowMapTest2 : MonoBehaviour
+public class LightCamera : MonoBehaviour
 {
-    private Camera cam;
+    public Camera cam;
     private Light l;
     public RenderTexture depthTexture;
     public Vector3 pointInScene;
-    
+
     // Start is called before the first frame update
     void Start()
     {

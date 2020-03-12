@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System.Xml;
 using UnityEngine;
 
 [ExecuteInEditMode]
@@ -10,8 +11,18 @@ public class ProjectionTest : MonoBehaviour
 
     [Header("!!!! Only z-Tested !!!!")]
     [SerializeField] private Vector3 pointInScene;
-    
-    //public bool feedBackIsOutside = false;
+    [SerializeField] private Vector3 pointInBox;
+
+    [SerializeField] private bool drawFrustumToBox;
+    [SerializeField] private bool drawBoxToFrustum;
+    [SerializeField] private bool alignInBoxXY;
+    [SerializeField] private bool drawDistance;
+
+    private Vector4 projectedIntoBoxLocal;
+
+    private Vector3 projectedIntoFrustumWorld;
+
+    private bool distancePositive;
     // Start is called before the first frame update
     void Start()
     {
@@ -22,11 +33,33 @@ public class ProjectionTest : MonoBehaviour
     void Update()
     {
         DrawDebugCube();
-        TestProjection();
+        TestProjectionFromWorldToBox();
+        if (alignInBoxXY)
+        {
+            pointInBox = cam.transform.worldToLocalMatrix * pointInBox;
+            pointInBox.x = projectedIntoBoxLocal.x;
+            pointInBox.y = projectedIntoBoxLocal.y;
+            pointInBox = cam.transform.localToWorldMatrix * pointInBox;
+        }
+        TestProjectionFromBoxToWorld();
+        TestPositiveDistance();
+        if (drawDistance)
+        {
+            Color c;
+            if (distancePositive)
+                c = Color.blue;
+            else
+                c = Color.red;
+                
+            //Different if projectedIntoBoxLocal is Vector3
+            Debug.DrawLine(cam.transform.localToWorldMatrix * projectedIntoBoxLocal,pointInBox,c);
+            Debug.DrawLine(projectedIntoFrustumWorld, pointInScene, c);
+        }
     }
     
-    public void TestProjection()
+    public void TestProjectionFromWorldToBox()
     {
+        //Point from World to Box
         Matrix4x4 camP = cam.projectionMatrix;
         Vector4 pointInScene = this.pointInScene;
         //Add w to point for projection
@@ -55,11 +88,44 @@ public class ProjectionTest : MonoBehaviour
             Matrix4x4 converter = createConvertionMatrixMinus11To01();
             pointProjected = converter *pointProjected; // same as MultiplyPoint3x4, ignore scaling
         }
-        
+        projectedIntoBoxLocal = pointProjected;
         Vector3 pointProjectedInWorld = cam.transform.localToWorldMatrix * pointProjected;
-        
-        Froxels.DrawPointCross(pointInScene,0.5f,Color.cyan);
-        Froxels.DrawPointCross(pointProjectedInWorld,0.5f,cResult);
+        if (drawFrustumToBox)
+        {
+            Froxels.DrawPointCross(pointInScene,0.2f,Color.cyan);
+            Froxels.DrawPointCross(pointProjectedInWorld,0.2f,cResult);
+        }
+    }
+
+    public void TestProjectionFromBoxToWorld()
+    {
+        Vector4 pointInBox = this.pointInBox;
+        pointInBox.w = 1;
+        Matrix4x4 camP = cam.projectionMatrix;
+        Matrix4x4 scale = Matrix4x4.identity;
+        scale.m22 = -1;
+        Matrix4x4 v = scale * cam.transform.worldToLocalMatrix;
+        Matrix4x4 vp = camP * v;
+        Matrix4x4 inverseVp = vp.inverse;
+
+        //get point local in Box
+        Vector4 pointInBoxLocal = cam.transform.worldToLocalMatrix * pointInBox;
+        //project point from box to frustum in World
+        Vector4 ponintInFrustum = inverseVp * pointInBoxLocal;
+        //correct depth (and other sides because we are already in world space)
+        ponintInFrustum /= ponintInFrustum.w;
+
+        projectedIntoFrustumWorld = ponintInFrustum;
+        if (drawBoxToFrustum)
+        {
+            Froxels.DrawPointCross(pointInBox, 0.2f,Color.magenta);
+            Froxels.DrawPointCross(ponintInFrustum,0.2f,Color.yellow);
+        }
+    }
+    void TestPositiveDistance()
+    {
+        distancePositive = cam.transform.worldToLocalMatrix.MultiplyPoint3x4(pointInBox).z >
+                           projectedIntoBoxLocal.z;
     }
 
     private void DrawDebugCube()
