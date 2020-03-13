@@ -53,7 +53,7 @@ public class Froxels : MonoBehaviour
     {
         _camera = GetComponent<Camera>();
         _debugSlice = FindObjectOfType<DebugSlice>();
-        _debugSlice.texture3DToSlice = scatteringOutput;
+       // _debugSlice.texture3DToSlice = scatteringOutput;
         //GenerateFroxels();
         GenerateFroxelsInWorldSpace();
     }

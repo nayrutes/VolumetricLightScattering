@@ -19,6 +19,38 @@ uint flat(uint3 id)
     return id.z * (Input_TexelSize.x * Input_TexelSize.y) + id.y * Input_TexelSize.x + id.x;
 }
 
+/*public static Vector3 WorldToProjectedLocal(Vector3 pWorld, Camera c, bool normalizedTo01, out bool isInside)
+    {
+        //Point from World to Box
+        Matrix4x4 camP = c.projectionMatrix;
+        Vector4 pWorld4 = pWorld.ToVector4();
+        Matrix4x4 scaleMatrix = Matrix4x4.identity;
+        scaleMatrix.m22 = -1.0f;
+        Matrix4x4 v = scaleMatrix * c.transform.worldToLocalMatrix;
+        Matrix4x4 vp = camP * v;
+        //get point projected in localSpace
+        Vector4 pointProjected = vp * pWorld4;
+        //correct projection by depthfactor -> now in box
+        pointProjected /= pointProjected.w;
+        Color cResult;
+        //!!!! Only z-Tested !!!!
+        isInside = (pointProjected.z <= 1 && pointProjected.z >= -1 && pointProjected.x <= 1 && pointProjected.x >= -1 &&
+                     pointProjected.y <= 1 && pointProjected.y >= -1);
+        if (normalizedTo01)
+        {
+            Matrix4x4 converter = CreateConvertionMatrixMinus11To01();
+            pointProjected = converter *pointProjected; // same as MultiplyPoint3x4, ignore scaling
+        }
+
+        return pointProjected;
+    }*/
+    
+float3 WorldToProjectedLocal(float3 p)
+{
+    float4 p4 = float4(p.xyz,1);
+    return p4;
+}
+
 [numthreads(8,8,16)]
 void CSMain (uint3 id : SV_DispatchThreadID)
 {
@@ -33,14 +65,32 @@ void CSMain (uint3 id : SV_DispatchThreadID)
     
     float4 pointProjected = mul(vp, points[flat(id)]);
     pointProjected = pointProjected/pointProjected.w;
+    bool inside = (pointProjected.z <= 1 && pointProjected.z >= -1 && pointProjected.x <= 1 && pointProjected.x >= -1 &&
+                         pointProjected.y <= 1 && pointProjected.y >= -1);
+    
     pointProjected = mul(convertTo01,pointProjected);
-    if(LightDepth.SampleLevel(samplerLightDepth,pointProjected.xy,0).r< pointProjected.z)
+    float depth = LightDepth.SampleLevel(samplerLightDepth,pointProjected.xy,0).r;
+    //float depth = tex2D(samplerLightDepth, pointProjected.xy).r;
+    
+    if(inside){
+        if(1-depth < pointProjected.z)
+        {
+            Result[id] = float4(0,0,0,0);
+        }else{
+            Result[id] = Input[id];
+        }
+    }else
     {
-        Result[id] = Input[id];
-    }else{
+        //No Fog visible if o Light
         Result[id] = float4(0,0,0,0);
+        //Result[id] = Input[id];
     }
-    
+    //Result[id] = float4(depth,depth,depth,1);
     //Result[id] = LightDepth.SampleLevel(samplerLightDepth,pointProjected.xy,0).a;
-    
+    //points all 0!?!?
+    //float4 t = float4(1 - points[flat(id)].xyz, 0.5);//+float4(1,1,1,0);
+    //Result[id] = t;
+    //Result[id] = float4(normalize(Input[id].xyz),0.5);
+    //Result[id] = float4(id.x & id.y, (id.x & 15)/15.0, (id.z & 15)/15.0, 1.0);
+    //Result[id] = LightDepth[id.xy];
 }

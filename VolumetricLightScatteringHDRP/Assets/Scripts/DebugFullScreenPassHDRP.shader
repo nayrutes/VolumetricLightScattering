@@ -118,7 +118,7 @@
         
         float ratio = _ScreenSize.x / _ScreenSize.y;
         
-        if(posInput.positionNDC.x*ratio < size && posInput.positionNDC.y < size)
+        if(posInput.positionNDC.x < size && posInput.positionNDC.y < size)
         {
             float2 debugImageCoordiantes = posInput.positionNDC * debugImageSize;
             float2 displaySizeCoordinates = posInput.positionNDC / size;

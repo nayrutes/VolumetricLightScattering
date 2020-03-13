@@ -18,6 +18,10 @@ public class DebugSlice : MonoBehaviour
     [SerializeField] private float size;
     [Range(0.0f,1.0f)]
     [SerializeField] private float slice;
+
+    [SerializeField] private bool syncSliceWithFroxel;
+    
+    [Header("Feedback")] [SerializeField] private int slice_;
     //[Range(0,256)]
     //[SerializeField] private int slice;
     [SerializeField] private Material debugMaterial;
@@ -25,10 +29,12 @@ public class DebugSlice : MonoBehaviour
     [SerializeField] private ComputeShader slicer;
 
     private int sliceInt = 0;
+
+    private Froxels _froxels;
     // Start is called before the first frame update
     void Start()
     {
-        
+        _froxels = FindObjectOfType<Froxels>();
     }
 
     private void Slice()
@@ -42,8 +48,10 @@ public class DebugSlice : MonoBehaviour
         
         slice = Mathf.Clamp(slice, 0, texture3DToSlice.volumeDepth);
         slicer.SetInt("toSlice", sliceInt);
+        slicer.SetVector("singleFroxel", new Vector4(_froxels.singleFroxel.x,_froxels.singleFroxel.y,_froxels.singleFroxel.z,0));
+        slicer.SetBool("markSingle", !_froxels.toggleSingleAll);
         //int threadGroupsX = texture3DToSlice.volumeDepth / 256;
-        slicer.Dispatch(0, 1,1,1);
+        slicer.Dispatch(0, texture3DToSlice.width/16,texture3DToSlice.height/16,1);
     }
 
     private int sliceTmp = -1;
@@ -72,11 +80,19 @@ public class DebugSlice : MonoBehaviour
             debugRenderTexture.Create();
         }
 
-        sliceInt = (int) (slice * texture3DToSlice.volumeDepth);
+        debugRenderTexture.filterMode = FilterMode.Point;
+        
+        if (syncSliceWithFroxel)
+        {
+            int sliceT = _froxels.singleFroxel.z;
+            slice = 1-(sliceT / (float)texture3DToSlice.volumeDepth);
+        }
+        sliceInt = (int) ((1-slice) * texture3DToSlice.volumeDepth);
+        slice_ = sliceInt;
         debugMaterial.SetFloat("size",size);
         debugMaterial.SetTexture("debugTexture", debugRenderTexture);
         debugMaterial.SetVector("debugImageSize", new Vector4(debugRenderTexture.width,debugRenderTexture.height,0,0));
-        if (sliceTmp != sliceInt)
+        //if (sliceTmp != sliceInt)
         {
             Slice();
             sliceTmp = sliceInt;

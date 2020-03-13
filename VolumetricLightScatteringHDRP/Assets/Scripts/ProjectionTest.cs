@@ -12,7 +12,9 @@ public class ProjectionTest : MonoBehaviour
     [Header("!!!! Only z-Tested !!!!")]
     [SerializeField] private Vector3 pointInScene;
     [SerializeField] private Vector3 pointInBox;
-
+    [Range(0.0f,1.0f)]
+    [SerializeField] private float distance;
+    
     [SerializeField] private bool drawFrustumToBox;
     [SerializeField] private bool drawBoxToFrustum;
     [SerializeField] private bool alignInBoxXY;
@@ -32,7 +34,7 @@ public class ProjectionTest : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        DrawDebugCube();
+        DrawDebugCube(cam.transform,normalizedBox);
         TestProjectionFromWorldToBox();
         if (alignInBoxXY)
         {
@@ -55,41 +57,46 @@ public class ProjectionTest : MonoBehaviour
             Debug.DrawLine(cam.transform.localToWorldMatrix * projectedIntoBoxLocal,pointInBox,c);
             Debug.DrawLine(projectedIntoFrustumWorld, pointInScene, c);
         }
+        DrawByDistance(new Vector2(projectedIntoBoxLocal.x,projectedIntoBoxLocal.y),distance);
     }
     
     public void TestProjectionFromWorldToBox()
     {
-        //Point from World to Box
-        Matrix4x4 camP = cam.projectionMatrix;
-        Vector4 pointInScene = this.pointInScene;
-        //Add w to point for projection
-        pointInScene.w = 1;
-        Matrix4x4 scaleMatrix = Matrix4x4.identity;
-        scaleMatrix.m22 = -1.0f;
-        Matrix4x4 v = scaleMatrix * cam.transform.worldToLocalMatrix;
-        Matrix4x4 vp = camP * v;
-        //get point projected in localSpace
-        Vector4 pointProjected = vp * pointInScene;
-        //correct projection by depthfactor -> now in box
-        pointProjected /= pointProjected.w;
-        Color cResult;
-        //!!!! Only z-Tested !!!!
-        if (pointProjected.z > 1 || pointProjected.z < -1)
-        {
-            cResult = Color.red;
-        }
-        else
-        {
-            cResult = Color.green;
-        }
-
-        if (normalizedBox)
-        {
-            Matrix4x4 converter = createConvertionMatrixMinus11To01();
-            pointProjected = converter *pointProjected; // same as MultiplyPoint3x4, ignore scaling
-        }
-        projectedIntoBoxLocal = pointProjected;
-        Vector3 pointProjectedInWorld = cam.transform.localToWorldMatrix * pointProjected;
+//        //Point from World to Box
+//        Matrix4x4 camP = cam.projectionMatrix;
+//        Vector4 pointInScene = this.pointInScene;
+//        //Add w to point for projection
+//        pointInScene.w = 1;
+//        Matrix4x4 scaleMatrix = Matrix4x4.identity;
+//        scaleMatrix.m22 = -1.0f;
+//        Matrix4x4 v = scaleMatrix * cam.transform.worldToLocalMatrix;
+//        Matrix4x4 vp = camP * v;
+//        //get point projected in localSpace
+//        Vector4 pointProjected = vp * pointInScene;
+//        //correct projection by depthfactor -> now in box
+//        pointProjected /= pointProjected.w;
+//        Color cResult;
+//        //!!!! Only z-Tested !!!!
+//        if (pointProjected.z > 1 || pointProjected.z < -1)
+//        {
+//            cResult = Color.red;
+//        }
+//        else
+//        {
+//            cResult = Color.green;
+//        }
+//
+//        if (normalizedBox)
+//        {
+//            Matrix4x4 converter = CreateConvertionMatrixMinus11To01();
+//            pointProjected = converter *pointProjected; // same as MultiplyPoint3x4, ignore scaling
+//        }
+//        projectedIntoBoxLocal = pointProjected;
+//        Vector3 pointProjectedInWorld = cam.transform.localToWorldMatrix * pointProjected;
+        bool isInside;
+        projectedIntoBoxLocal = WorldToProjectedLocal(pointInScene, cam, normalizedBox, out isInside);
+        Vector3 pointProjectedInWorld = ToWorld(projectedIntoBoxLocal, cam.transform);
+        Color cResult = isInside ? Color.green : Color.red;
         if (drawFrustumToBox)
         {
             Froxels.DrawPointCross(pointInScene,0.2f,Color.cyan);
@@ -128,7 +135,23 @@ public class ProjectionTest : MonoBehaviour
                            projectedIntoBoxLocal.z;
     }
 
-    private void DrawDebugCube()
+    void DrawByDistance(Vector2 line, float d)
+    {
+        Vector3 inBox = new Vector3(line.x,line.y,d);
+        //inBox = createConvertionMatrixMinus11To01() * inBox;
+        Vector3 inBoxWorld = cam.transform.localToWorldMatrix.MultiplyPoint(inBox);
+        Froxels.DrawPointCross(inBoxWorld,0.2f,Color.grey);
+        if (projectedIntoBoxLocal.z > d)
+        {
+            Debug.DrawLine(inBoxWorld,cam.transform.localToWorldMatrix * projectedIntoBoxLocal,Color.red);
+        }
+        else
+        {
+            Debug.DrawLine(inBoxWorld,cam.transform.localToWorldMatrix * projectedIntoBoxLocal,Color.green);
+        }
+    }
+    
+    public static void DrawDebugCube(Transform t, bool normalizedTo01)
     {
         //lbf, rbf, ltf, rtf, lbn, rbn, ltn, rtn,
         Vector3[] p = new Vector3[]
@@ -143,9 +166,9 @@ public class ProjectionTest : MonoBehaviour
             new Vector3(1, 1, 1)
         };
 
-        if (normalizedBox)
+        if (normalizedTo01)
         {
-            Matrix4x4 c = createConvertionMatrixMinus11To01();
+            Matrix4x4 c = CreateConvertionMatrixMinus11To01();
             for (int i = 0; i < p.Length; i++)
             {
                 p[i] = c.MultiplyPoint3x4(p[i]);
@@ -154,7 +177,7 @@ public class ProjectionTest : MonoBehaviour
         
         for (var i = 0; i < p.Length; i++)
         {
-            p[i] = cam.transform.localToWorldMatrix.MultiplyPoint3x4(p[i]);
+            p[i] = t.localToWorldMatrix.MultiplyPoint3x4(p[i]);
         }
 
         //front
@@ -174,12 +197,12 @@ public class ProjectionTest : MonoBehaviour
         QuickDrawLine(p,5,7);
     }
 
-    private void QuickDrawLine(Vector3[] points, int p1, int p2)
+    public static void QuickDrawLine(Vector3[] points, int p1, int p2)
     {
         Debug.DrawLine(points[p1],points[p2],Color.white);
     }
 
-    private Matrix4x4 createConvertionMatrixMinus11To01()
+    private static Matrix4x4 CreateConvertionMatrixMinus11To01()
     {
         Matrix4x4 c = new Matrix4x4
         (new Vector4(0.5f, 0.0f, 0.0f, 0.0f),
@@ -188,5 +211,37 @@ public class ProjectionTest : MonoBehaviour
             new Vector4(0.5f, 0.5f, 0.5f, 1.0f)
         );
         return c;
+    }
+
+    public static Vector3 WorldToProjectedLocal(Vector3 pWorld, Camera c, bool normalizedTo01, out bool isInside)
+    {
+        //Point from World to Box
+        Matrix4x4 camP = c.projectionMatrix;
+        Vector4 pWorld4 = pWorld.ToVector4();
+        Matrix4x4 scaleMatrix = Matrix4x4.identity;
+        scaleMatrix.m22 = -1.0f;
+        Matrix4x4 v = scaleMatrix * c.transform.worldToLocalMatrix;
+        Matrix4x4 vp = camP * v;
+        //get point projected in localSpace
+        Vector4 pointProjected = vp * pWorld4;
+        //correct projection by depthfactor -> now in box
+        pointProjected /= pointProjected.w;
+        Color cResult;
+        //!!!! Only z-Tested !!!!
+        isInside = (pointProjected.z <= 1 && pointProjected.z >= -1 && pointProjected.x <= 1 && pointProjected.x >= -1 &&
+                     pointProjected.y <= 1 && pointProjected.y >= -1);
+        if (normalizedTo01)
+        {
+            Matrix4x4 converter = CreateConvertionMatrixMinus11To01();
+            pointProjected = converter *pointProjected; // same as MultiplyPoint3x4, ignore scaling
+        }
+
+        return pointProjected;
+    }
+
+    public static Vector3 ToWorld(Vector3 p, Transform t)
+    {
+        Vector3 pointProjectedInWorld = t.localToWorldMatrix * p.ToVector4();
+        return pointProjectedInWorld;
     }
 }

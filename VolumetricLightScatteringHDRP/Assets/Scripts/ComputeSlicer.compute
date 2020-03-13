@@ -11,9 +11,12 @@ int toSlice;
 float4 ratios;
 float4 size;
 
+bool markSingle;
+float4 singleFroxel;
+
 SamplerState samplerInput;
 
-[numthreads(1,1,1)]
+[numthreads(16,16,1)]
 void CSMain (uint3 id : SV_DispatchThreadID)
 {
     // TODO: insert actual code here!
@@ -30,17 +33,55 @@ void CSMain (uint3 id : SV_DispatchThreadID)
             }
         }
     */
-    for (int xx = 0; xx < size.x; xx++) {
+    /*for (int xx = 0; xx < size.x; xx++) {
         for (int yy = 0; yy < size.y; yy++) {
             for (int zz = 0; zz < size.z; zz++) {
             if(zz==toSlice)
                 {
                    //Output[uint2(xx,yy)] = Input.SampleLevel(samplerInput, uint3(xx,yy,zz), 0);
                    Output[uint2(xx,yy)] = Input[uint3(xx,yy,zz)];
+                   if(markSingle && zz == singleFroxel.z)
+                   {
+                        if(xx == singleFroxel.x+1 && yy == singleFroxel.y+1 || xx == singleFroxel.x+1 && yy == singleFroxel.y-1 || xx == singleFroxel.x-1 && yy == singleFroxel.y+1 || xx == singleFroxel.x-1 && yy == singleFroxel.y-1
+                        || xx == singleFroxel.x && yy == singleFroxel.y+1 || xx == singleFroxel.x && yy == singleFroxel.y-1 || xx == singleFroxel.x-1 && yy == singleFroxel.y || xx == singleFroxel.x-1 && yy == singleFroxel.y)
+                        {
+                            Output[uint2(xx,yy)] = float4(0,1,1,1);
+                        }
+                   }
                 }
             }
         }
+    }*/
+    
+    for (int zz = 0; zz < size.z; zz++) {
+    if(zz==toSlice)
+        {
+           
+           //Output[uint2(xx,yy)] = Input.SampleLevel(samplerInput, uint3(xx,yy,zz), 0);
+           Output[id.xy] = Input[uint3(id.xy,zz)];
+           
+           //DebugTest
+           //Output[id.xy] = float4(normalize(float3(id.xy,zz)),1);
+           
+           if(markSingle && toSlice == singleFroxel.z)
+           {
+                if(id.x == singleFroxel.x+1 && id.y == singleFroxel.y+1 
+                || id.x == singleFroxel.x+1 && id.y == singleFroxel.y-1 
+                || id.x == singleFroxel.x-1 && id.y == singleFroxel.y+1 
+                || id.x == singleFroxel.x-1 && id.y == singleFroxel.y-1
+                || id.x == singleFroxel.x && id.y == singleFroxel.y+1 
+                || id.x == singleFroxel.x && id.y == singleFroxel.y-1 
+                || id.x == singleFroxel.x-1 && id.y == singleFroxel.y 
+                || id.x == singleFroxel.x+1 && id.y == singleFroxel.y)
+                {
+                    Output[id.xy] = float4(0,1,1,1);
+                }
+           }
+        }
     }
+    
+    
+    
     
     
     //if(id.z == toSlice)
