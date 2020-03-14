@@ -56,7 +56,7 @@
         // Add your custom pass code here
         
         //color.rgb = 1 - color.rgb;
-        float3 positionInVolume = float3(posInput.positionSS.x/_Amount.x,posInput.positionSS.y/_Amount.y,1);
+        float3 positionInVolume = float3(posInput.positionNDC.x,posInput.positionNDC.y,1);
         float4 scatteringInformation = tex3D(VolumetricFogSampler, positionInVolume);
         float3 inScattering = scatteringInformation.rgb;
         float transmittance = scatteringInformation.a;

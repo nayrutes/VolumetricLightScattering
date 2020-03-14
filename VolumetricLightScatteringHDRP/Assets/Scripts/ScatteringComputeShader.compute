@@ -55,9 +55,10 @@ void CSMain (uint3 id : SV_DispatchThreadID)
             
             for(uint z = 1; z < VOLUME_DEPTH;z++)
             {
-                float4 nextValue = Input[uint3(x,y, z)].rgba;
+                uint zTmp = z;
+                float4 nextValue = Input[uint3(x,y, zTmp)].rgba;
                 currentSliceValue = AccumulateScattering(currentSliceValue, nextValue);
-                WriteOutput(uint3(x,y, z), currentSliceValue);
+                WriteOutput(uint3(x,y, zTmp), currentSliceValue);
             }
         }
     }

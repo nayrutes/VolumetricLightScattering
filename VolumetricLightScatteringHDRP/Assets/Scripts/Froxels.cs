@@ -19,7 +19,7 @@ public class Froxels : MonoBehaviour
     [SerializeField] private RenderTexture scatteringInput;
     [SerializeField] private RenderTexture scatteringInputWithShadows;
     [SerializeField] private RenderTexture scatteringOutput;
-    [SerializeField] private Material renderMaterial;
+    //[SerializeField] private Material renderMaterial;
     [SerializeField] private Material fullScreenPassHdrpMaterial;
     [SerializeField] private Vector4 insetValue;
     [SerializeField] private ShadowManager shadowManager;

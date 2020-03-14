@@ -11,7 +11,9 @@ public class DebugSlice : MonoBehaviour
 
     //public static DebugSlice _DebugSlice;
     [SerializeField] public RenderTexture texture3DToSlice;
-    [SerializeField] private RenderTexture debugRenderTexture;
+    [SerializeField] private RenderTexture texture2D;
+    [SerializeField] private bool switchTo2D;
+    private RenderTexture debugRenderTexture;
     //[SerializeField] private Shader debugShader;
 
     [Range(0.0f,1.0f)]
@@ -54,7 +56,7 @@ public class DebugSlice : MonoBehaviour
         slicer.Dispatch(0, texture3DToSlice.width/16,texture3DToSlice.height/16,1);
     }
 
-    private int sliceTmp = -1;
+    //private int sliceTmp = -1;
     
     // Update is called once per frame
     void Update()
@@ -89,13 +91,19 @@ public class DebugSlice : MonoBehaviour
         }
         sliceInt = (int) ((1-slice) * texture3DToSlice.volumeDepth);
         slice_ = sliceInt;
+        //if (sliceTmp != sliceInt)
+        
+        if (switchTo2D)
+        {
+            debugRenderTexture = texture2D;
+        }
+        else
+        {
+            Slice();
+        }
+    
         debugMaterial.SetFloat("size",size);
         debugMaterial.SetTexture("debugTexture", debugRenderTexture);
         debugMaterial.SetVector("debugImageSize", new Vector4(debugRenderTexture.width,debugRenderTexture.height,0,0));
-        //if (sliceTmp != sliceInt)
-        {
-            Slice();
-            sliceTmp = sliceInt;
-        }
     }
 }

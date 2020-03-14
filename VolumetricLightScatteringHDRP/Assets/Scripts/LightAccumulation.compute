@@ -59,7 +59,7 @@ void CSMain (uint3 id : SV_DispatchThreadID)
 //    Result[id.xy] = float4(id.x & id.y, (id.x & 15)/15.0, (id.y & 15)/15.0, 0.0);
     
     //RemoveLater?
-    Input[id] = float4(1,1,1,0.1);
+    Input[id] = float4(0,0.1,0.1,0.1);
     //uint index = flat(id);
     //float4 p = points[index];
     
