@@ -249,7 +249,7 @@ Material:
     - _UVDetailsMappingMask: {r: 1, g: 0, b: 0, a: 0}
     - _UVMappingMask: {r: 1, g: 0, b: 0, a: 0}
     - _UVMappingMaskEmissive: {r: 1, g: 0, b: 0, a: 0}
-    - debugImageSize: {r: 16, g: 16, b: 0, a: 0}
+    - debugImageSize: {r: 32, g: 32, b: 0, a: 0}
 --- !u!114 &1682116775788344728
 MonoBehaviour:
   m_ObjectHideFlags: 11

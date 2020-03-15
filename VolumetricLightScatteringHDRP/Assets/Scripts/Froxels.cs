@@ -95,8 +95,8 @@ public class Froxels : MonoBehaviour
         
         
         
-        fullScreenPassHdrpMaterial.SetVector("_Amount", new Vector4(amount.x,amount.y,amount.z,0));
-        fullScreenPassHdrpMaterial.SetTexture("VolumetricFogSampler",scatteringOutput);
+        //fullScreenPassHdrpMaterial.SetVector("_Amount", new Vector4(amount.x,amount.y,amount.z,0));
+        //fullScreenPassHdrpMaterial.SetTexture("VolumetricFogSampler",scatteringOutput);
         
 
 
@@ -538,15 +538,18 @@ public class Froxels : MonoBehaviour
 //        scatteringInput.Create();
 //        scatteringOutput.Create();
         //AdjustRenderTexture(scatteringInput);
+        Vector4 size = new Vector4(scatteringInputWithShadows.width, scatteringInputWithShadows.height,
+            scatteringInputWithShadows.volumeDepth, 0);
+        
         AdjustRenderTexture(scatteringOutput);
         
         scatteringCompute.SetTexture(0, "Input",scatteringInputWithShadows);
         scatteringCompute.SetTexture(0, "Result",scatteringOutput);
         scatteringCompute.SetVector("insetValue",insetValue);
-        scatteringCompute.SetVector("size", new Vector4(scatteringInputWithShadows.width,scatteringInputWithShadows.height,scatteringInputWithShadows.volumeDepth,0));
+        scatteringCompute.SetVector("size", size);
         
         //int threadGroupsX = amount.z / 256;
-        scatteringCompute.Dispatch(0, 1,1,1);
+        scatteringCompute.Dispatch(0, (int)(size.x/32.0f),(int)(size.y/32.0f),1);
         
         scatteringCompute.SetInt("VOLUME_DEPTH",amount.z);
     }

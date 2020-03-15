@@ -34,21 +34,11 @@ void Insert(){
     }
 }
 
-[numthreads(1,1,1)]
+[numthreads(32,32,1)]
 void CSMain (uint3 id : SV_DispatchThreadID)
-{
-    // TODO: insert actual code here!
-    
-    //override Input for testing
-    //for(uint d = 0; d < VOLUME_DEPTH;d++)
-    //{
-        //float4 insetValue = float4(0.5,0.5,0.5,0.5);
-    //    Input[uint3(id.xy,d)] = insetValue;
-    //}
-    //Insert();
-    
+{    
     //actual calculation
-    for (uint x=0; x<size.x; x++){
+    /*for (uint x=0; x<size.x; x++){
         for (uint y=0; y<size.y; y++){
             float4 currentSliceValue = Input[uint3(x,y,0)].rgba;
             WriteOutput(uint3(x,y,0),currentSliceValue);
@@ -61,7 +51,17 @@ void CSMain (uint3 id : SV_DispatchThreadID)
                 WriteOutput(uint3(x,y, zTmp), currentSliceValue);
             }
         }
+    }*/
+    
+    float4 currentSliceValue = Input[uint3(id.xy,0)].rgba;
+    WriteOutput(uint3(id.xy,0),currentSliceValue);
+    
+    for(uint z = 1; z < VOLUME_DEPTH;z++)
+    {
+        uint zTmp = z;
+        float4 nextValue = Input[uint3(id.xy, zTmp)].rgba;
+        currentSliceValue = AccumulateScattering(currentSliceValue, nextValue);
+        WriteOutput(uint3(id.xy, zTmp), currentSliceValue);
     }
     
-    //Result[id.xyz] = float4(id.x & id.y, (id.x & 15)/15.0, (id.y & 15)/15.0, 0.0);
 }
