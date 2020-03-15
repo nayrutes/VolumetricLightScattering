@@ -21,6 +21,7 @@ public class Froxels : MonoBehaviour
     [SerializeField] private RenderTexture scatteringOutput;
     //[SerializeField] private Material renderMaterial;
     [SerializeField] private Material fullScreenPassHdrpMaterial;
+    [SerializeField] private ComputeShader orientCompute;
     [SerializeField] private Vector4 insetValue;
     [SerializeField] private ShadowManager shadowManager;
     
@@ -32,6 +33,7 @@ public class Froxels : MonoBehaviour
     public bool drawEdges = true;
     public bool toggleSingleAll = false;
     public Vector3Int singleFroxel;
+    public bool orientFroxels = true;
     public bool enableScatteringCompute = true;
     public bool enableGenerateFroxelsEveryFrame = true;
     public bool enableCalculateShadows = true;
@@ -39,14 +41,32 @@ public class Froxels : MonoBehaviour
     [SerializeField] private AnimationCurve depthDistribution;
     
     private Camera _camera;
-    private Frustum[] _froxels;
-
+    private Froxel[] _froxels;
+    private FroxelFlat[] ff;
+    ComputeBuffer cb;
+    
     private DebugSlice _debugSlice;
     private Vector3 froxelLastPositionOrigin;
     private Matrix4x4 lastFrameWorldToLocal;
-    struct Froxel
+    public struct Froxel
     {
-        public Frustum frustum;
+        //public Frustum frustum;
+        public Vector3 center;
+        public Vector3[] corners; // Positions of the 8 corners
+    }
+    
+    public struct FroxelFlat
+    {
+        //public Frustum frustum;
+        public Vector3 center;
+        public Vector3 corner0; // Positions of the 8 corners
+        public Vector3 corner1;
+        public Vector3 corner2;
+        public Vector3 corner3;
+        public Vector3 corner4;
+        public Vector3 corner5;
+        public Vector3 corner6;
+        public Vector3 corner7;
     }
     
     void Start()
@@ -65,15 +85,21 @@ public class Froxels : MonoBehaviour
             //GenerateFroxels();
             GenerateFroxelsInWorldSpace();
         else
-            OrientFroxels();
+        {
+            if (orientFroxels)
+            {
+                //OrientFroxels();
+                OrientFroxelsComputeShader();
+            }
+        }
         
         if (enableDebugDraw)
         {
             if (toggleSingleAll)
             {
-                foreach (Frustum frustum in _froxels)
+                foreach (Froxel froxel in _froxels)
                 {
-                    DrawFrustum(frustum);
+                    DrawFrustum(froxel);
                 }
             }
             else
@@ -125,7 +151,10 @@ public class Froxels : MonoBehaviour
     private void GenerateFroxelsInWorldSpace()
     {
         lastFrameWorldToLocal = _camera.transform.worldToLocalMatrix;
-        _froxels = new Frustum[amount.x*amount.y*amount.z];
+        _froxels = new Froxel[amount.x*amount.y*amount.z];
+        ff = new FroxelFlat[_froxels.Length];
+        cb = new ComputeBuffer(ff.Length,sizeof(float)*3+sizeof(float)*3*8);
+        
         Vector3[] fC = new Vector3[4];
         Vector3[] nC = new Vector3[4];
         _camera.CalculateFrustumCorners(new Rect(0, 0, 1, 1), _camera.farClipPlane, Camera.MonoOrStereoscopicEye.Mono, fC);
@@ -174,8 +203,11 @@ public class Froxels : MonoBehaviour
                         points[z * ((amount.x+1) * (amount.y+1)) + (y+1) * (amount.x+1) + x],
                         points[z * ((amount.x+1) * (amount.y+1)) + (y+1) * (amount.x+1) + (x+1)]
                     };
-                    Frustum f = GenerateFrustum(corners);
-                    _froxels[z * ((amount.x) * (amount.y)) + y * (amount.x) + x] = f;
+                    //Frustum f = GenerateFrustum(corners);
+                    Froxel froxel = new Froxel();
+                    froxel.corners = corners;
+                    froxel.center = CalculateCenter(froxel);
+                    _froxels[z * ((amount.x) * (amount.y)) + y * (amount.x) + x]= froxel;
                 }
             }
         }
@@ -202,255 +234,161 @@ public class Froxels : MonoBehaviour
     }
     
     //Generate Froxels in Unit Cube, Transform them into the View Frustrum
-    private void GenerateFroxels()
-    {
-        froxelLastPositionOrigin = _camera.transform.position;
-        lastFrameWorldToLocal = _camera.transform.worldToLocalMatrix;
-        
-        _froxels = new Frustum[amount.x*amount.y*amount.z];
-        
-        //Froxelize Unitcube
-        for (int k = 0; k < amount.z; k++)
-        {
-            float inZFar = ((1.0f / amount.z) * k);
-            float inZNear = ((1.0f / amount.z) * (k+1));
-            
-            //reverse projection non-linear depth before applying projMatrix
-            float f = _camera.farClipPlane;
-            float n = _camera.nearClipPlane;
-            float ratio = f / n;
-
-//            inZNear = 1-Mathf.Pow((1 - inZNear),2);
-//            inZFar = 1-Mathf.Pow((1 - inZFar),2);
-
-            //inZNear = 1-Mathf.Pow((inZNear),2);
-            //inZFar = 1-Mathf.Pow((inZFar),2);
-
-//            inZNear = -inZNear;
-//            inZFar = -inZFar;
-            //if(inZNear>0)
-                inZNear = (1-1 / (inZNear));
-            //else
-            //{
-            //    inZNear = 1 - inZNear;
-            //}
-            //if(inZFar>0)
-                inZFar = (1-1 / (inZFar));
-
-                //inZNear = ((1 / (inZNear - 2)) + 1);
-                //inZFar = ((1 / (inZFar - 2)) + 1);
-            //else
-            //{
-            //    inZFar = 1 - inZFar;
-            //}
-
-            //inZNear = ((f-n) / (n*f) * (inZNear) - (1 / n));
-            //inZFar = ((n-f) / (n*f) * (inZFar) - (1 / n));
-            
-            //inZNear = (n-n*inZNear)/(f*inZNear - n*inZNear);
-            //inZFar = (n-n*inZFar)/(f*inZFar - n*inZFar);
-
-            //inZNear = 1 / (1 - inZNear);
-            //inZFar = 1 / (1 - inZFar);
-            
-            inZFar = ConvertRange01ToMinus11(inZFar);
-            inZNear = ConvertRange01ToMinus11(inZNear);
-            
-            //inZNear = (2-1 / (inZNear));
-            //inZFar = (2-1 / (inZFar));
-            
-//            inZNear = -inZNear;
-//            inZFar = -inZFar;
-            
-            //inZNear = 1 / inZNear;
-            //inZFar = 1 / inZFar;
-            
-            //inZNear = (f + n) / (f - n) + (2 * n * f) / ((f - n) * inZNear);
-            //inZFar = (f + n) / (f - n) + (2 * n * f) / ((f - n) * inZFar);
-            
-            //inZNear = 1/(-((f + n) / (f - n)) * inZNear - ((2 * f * n) / (f - n)) / -inZNear);
-            //inZFar = 1/(-((f + n) / (f - n)) * inZFar - ((2 * f * n) / (f - n)) / -inZFar);
-            
-            //inZNear = ((n-f) / (n*f) * inZNear - (1 / n));
-            //inZFar = ((n-f) / (n*f) * inZFar - (1 / n));
-
-            //close
-            //inZNear = 1/((n - f*inZNear)/(inZNear*(n-f)));
-            //inZFar = 1/((n - f*inZFar)/(inZFar*(n-f)));
-
-            
-            
-            //inZNear = ((n-f) / (n) * inZNear + (f / n));
-            //inZFar = ((n-f) / (n) * inZFar + (f / n));
-            for (int j = 0; j < amount.y; j++)
-            {
-                float inY = 1;
-                float inYFractionBottom = ConvertRange01ToMinus11(inY * j / amount.y);
-                float inYFractionTop = ConvertRange01ToMinus11(inY * (j+1) / amount.y);
-                
-                for (int i = 0; i < amount.x; i++)
-                {
-                    float inX = 1;
-                    float inXFractionLeft = ConvertRange01ToMinus11(inX * i / amount.x);
-                    float inXFractionRight = ConvertRange01ToMinus11(inX * (i + 1) / amount.x);
-                    
-                    Frustum frustum = new Frustum();
-                    
-                    Vector3[] corners = new Vector3[8];
-                    var forward = Vector3.forward;
-                    var right = Vector3.right;
-                    var up = Vector3.up;
-                    corners[0] = (forward * inZFar + right*inXFractionLeft + up* inYFractionBottom);
-                    corners[1] = (forward * inZFar + right*inXFractionRight + up* inYFractionBottom);
-                    corners[2] = (forward * inZFar + right*inXFractionLeft + up* inYFractionTop);
-                    corners[3] = (forward * inZFar + right*inXFractionRight + up* inYFractionTop);
-                    corners[4] = (forward * inZNear + right*inXFractionLeft + up* inYFractionBottom);
-                    corners[5] = (forward * inZNear + right*inXFractionRight + up* inYFractionBottom);
-                    corners[6] = (forward * inZNear + right*inXFractionLeft + up* inYFractionTop);
-                    corners[7] = (forward * inZNear + right*inXFractionRight + up* inYFractionTop);
-
-//                    corners[0] = (forward * inZFar);
-//                    corners[1] = (forward * inZFar);
-//                    corners[2] = (forward * inZFar);
+//    private void GenerateFroxels()
+//    {
+//        froxelLastPositionOrigin = _camera.transform.position;
+//        lastFrameWorldToLocal = _camera.transform.worldToLocalMatrix;
+//        
+//        _froxels = new Frustum[amount.x*amount.y*amount.z];
+//        
+//        //Froxelize Unitcube
+//        for (int k = 0; k < amount.z; k++)
+//        {
+//            float inZFar = ((1.0f / amount.z) * k);
+//            float inZNear = ((1.0f / amount.z) * (k+1));
+//            
+//            //reverse projection non-linear depth before applying projMatrix
+//            float f = _camera.farClipPlane;
+//            float n = _camera.nearClipPlane;
+//            float ratio = f / n;
+//
+//
+//                inZNear = (1-1 / (inZNear));
+//
+//                inZFar = (1-1 / (inZFar));
+//
+//            
+//            inZFar = ConvertRange01ToMinus11(inZFar);
+//            inZNear = ConvertRange01ToMinus11(inZNear);
+//            
+//
+//            for (int j = 0; j < amount.y; j++)
+//            {
+//                float inY = 1;
+//                float inYFractionBottom = ConvertRange01ToMinus11(inY * j / amount.y);
+//                float inYFractionTop = ConvertRange01ToMinus11(inY * (j+1) / amount.y);
+//                
+//                for (int i = 0; i < amount.x; i++)
+//                {
+//                    float inX = 1;
+//                    float inXFractionLeft = ConvertRange01ToMinus11(inX * i / amount.x);
+//                    float inXFractionRight = ConvertRange01ToMinus11(inX * (i + 1) / amount.x);
+//                    
+//                    Frustum frustum = new Frustum();
+//                    
+//                    Vector3[] corners = new Vector3[8];
+//                    var forward = Vector3.forward;
+//                    var right = Vector3.right;
+//                    var up = Vector3.up;
+//                    corners[0] = (forward * inZFar + right*inXFractionLeft + up* inYFractionBottom);
+//                    corners[1] = (forward * inZFar + right*inXFractionRight + up* inYFractionBottom);
+//                    corners[2] = (forward * inZFar + right*inXFractionLeft + up* inYFractionTop);
 //                    corners[3] = (forward * inZFar + right*inXFractionRight + up* inYFractionTop);
 //                    corners[4] = (forward * inZNear + right*inXFractionLeft + up* inYFractionBottom);
 //                    corners[5] = (forward * inZNear + right*inXFractionRight + up* inYFractionBottom);
 //                    corners[6] = (forward * inZNear + right*inXFractionLeft + up* inYFractionTop);
 //                    corners[7] = (forward * inZNear + right*inXFractionRight + up* inYFractionTop);
-                    
-//                    for (int index = 0; index < corners.Length; index++)
-//                    {
-//                        //corners[index].z = -_camera.worldToCameraMatrix.MultiplyPoint3x4(corners[index]).z;
-//                        corners[index].z *= -1;
-////                        corners[index].z =
-////                            (1 / (((_camera.farClipPlane - _camera.nearClipPlane) /
-////                                   (_camera.nearClipPlane * _camera.farClipPlane)) * corners[index].z -
-////                                  (1 / _camera.nearClipPlane))) * _camera.farClipPlane;
-//                        corners[index] = _camera.transform.localToWorldMatrix.MultiplyPoint3x4(corners[index]);
-//                    }
 
-                    frustum.corners = corners;
-                    //DrawFrustum(frustum);
+    //frustum.corners = corners;
                     
-                    //frustum planes are inward-facing, generateClockwise
-//                    Plane left = new Plane();
-//                    left.Set3Points(nearLeftTop,farLeftTop,farLeftBottom);
-//                    Plane right = new Plane();
-//                    right.Set3Points(farRightBottom,farRightTop,nearRightTop);
-//                    Plane top = new Plane();
-//                        top.Set3Points(nearLeftTop,nearRightTop,farRightTop);
-//                    Plane bottom = new Plane();
-//                    bottom.Set3Points(nearLeftBottom, farLeftBottom, farRightBottom);
-//                    Plane near = new Plane();
-//                    near.Set3Points(nearRightTop,nearLeftTop,nearLeftBottom);
-//                    Plane far = new Plane();
-//                    far.Set3Points(farLeftTop,farRightTop,farRightBottom);
-                    // Left, right, top, bottom, near, far
-                    //frustum.planes = new[] {left, right, top, bottom, near, far};
-
-                    _froxels[k * (amount.x * amount.y) + j * amount.x + i] = frustum;
+//                    _froxels[k * (amount.x * amount.y) + j * amount.x + i] = frustum;
                     
                     //OrientFroxels();
-                }
-            }
-        }
+//                }
+//            }
+//        }
         //OrientFroxels();
-        ProjectUnitCubeToFrustrum();
-    }
+//        ProjectUnitCubeToFrustrum();
+//    }
 
-    void ProjectUnitCubeToFrustrum()
-    {
-        //TODO check if better use Non-Jittered Projection matrix https://docs.unity3d.com/ScriptReference/Camera-nonJitteredProjectionMatrix.html
-        Matrix4x4 invViewProjMatrix = _camera.projectionMatrix.inverse;
-        var projectionMatrix = _camera.projectionMatrix;
-        var m = _camera.worldToCameraMatrix;
-        Matrix4x4 customProjMatrix = new Matrix4x4();//s = projectionMatrix;
-        customProjMatrix.m00 = projectionMatrix.m00;
-        customProjMatrix.m11 = projectionMatrix.m11;
-        customProjMatrix.m32 = projectionMatrix.m32;
-        //customProjMatrix.m33 = projectionMatrix.m33;
-        customProjMatrix.m23 = projectionMatrix.m23;
-        //customProjMatrix.
-        foreach (Frustum froxel in _froxels)
-        {
-            float f = _camera.farClipPlane;
-            float n = _camera.nearClipPlane;
-            float nTmp = n;
-            
-            for(int index=0; index<froxel.corners.Length;index++)
-            {
-                Vector3 p = froxel.corners[index];
-                //p = new Vector3(p.x,p.y,1-p.z);
-                //froxel.corners[index] = invViewProjMatrix.MultiplyPoint(p);
-                froxel.corners[index] = projectionMatrix.inverse.MultiplyPoint(p);
-//                if(index>=4)
-//                    froxel.corners[index] *= -1;
-//                if(index==0)
-//                    nTmp = froxel.corners[0].z;
-                froxel.corners[index].z *= -1;
-                //froxel.corners[index] *= ((f-n) / (n*f) * (1 -froxel.corners[index].z) - (1 / n));
-                //froxel.corners[index] *= (n-n*froxel.corners[index].z)/(f*froxel.corners[index].z - n*froxel.corners[index].z);
-                //froxel.corners[index] *= -1;
-                //froxel.corners[index] = ((froxel.corners[index] + new Vector3(0, 0, n))) * f / n;// + new Vector3(0,0,f);
-                //scaling and back right, only front? small offset
-                //froxel.corners[index] = (froxel.corners[index]) * (f / n);// - froxel.corners[index] * (f-n)/(f+n);
-                //not working correctly
-                //froxel.corners[index] = new Vector3(0,0,n)+ (f - n) / n * froxel.corners[index];
-                //deviding shift into seperate steps
-                float a = 0;
-                float b = n;
-                float c = n;
-                float d = f;
-                
-//                froxel.corners[index].z = froxel.corners[index].z - new Vector3(0, 0, a).z;
-//                froxel.corners[index].z = froxel.corners[index].z / (b-a);
-////                //changing scaling?
-//                froxel.corners[index].z = froxel.corners[index].z *(d-c);
-//                froxel.corners[index].z = froxel.corners[index].z+new Vector3(0,0,c).z;
-                
-                //froxel.corners[index].z = (1 / (((f - n) /(n * f)) * froxel.corners[index].z -(1 / n)));
-                
-                //froxel.corners[index] = (froxel.corners[index] * f / n)- (new Vector3(0, 0, n)*n/f);
-                
-                //froxel.corners[index] -= new Vector3(0,0,-1);
-                //froxel.corners[index] /= -(f + n) / (f - n);
-                //froxel.corners[index] -= new Vector3(0,0,-(2 * f * n) / (f - n));
-                froxel.corners[index] = _camera.transform.localToWorldMatrix.MultiplyPoint3x4(froxel.corners[index]);
-            }
-        }
-    }
+//    void ProjectUnitCubeToFrustrum()
+       //    {
+       //        //TODO check if better use Non-Jittered Projection matrix https://docs.unity3d.com/ScriptReference/Camera-nonJitteredProjectionMatrix.html
+       //        Matrix4x4 invViewProjMatrix = _camera.projectionMatrix.inverse;
+       //        var projectionMatrix = _camera.projectionMatrix;
+       //        var m = _camera.worldToCameraMatrix;
+       //        Matrix4x4 customProjMatrix = new Matrix4x4();//s = projectionMatrix;
+       //        customProjMatrix.m00 = projectionMatrix.m00;
+       //        customProjMatrix.m11 = projectionMatrix.m11;
+       //        customProjMatrix.m32 = projectionMatrix.m32;
+       //        //customProjMatrix.m33 = projectionMatrix.m33;
+       //        customProjMatrix.m23 = projectionMatrix.m23;
+       //        //customProjMatrix.
+       //        foreach (Frustum froxel in _froxels)
+       //        {
+       //            float f = _camera.farClipPlane;
+       //            float n = _camera.nearClipPlane;
+       //            float nTmp = n;
+       //            
+       //            for(int index=0; index<froxel.corners.Length;index++)
+       //            {
+       //                Vector3 p = froxel.corners[index];
+       //                froxel.corners[index] = projectionMatrix.inverse.MultiplyPoint(p);
+       //                froxel.corners[index].z *= -1;
+       //                froxel.corners[index] = _camera.transform.localToWorldMatrix.MultiplyPoint3x4(froxel.corners[index]);
+       //            }
+       //        }
+       //    }
     
     void OrientFroxels()
     {
         //Matrix4x4 inv = Matrix4x4.Inverse(lastFrameWorldToLocal);
         Matrix4x4 comb = _camera.transform.localToWorldMatrix * lastFrameWorldToLocal;
-        foreach (Frustum froxel in _froxels)
+        for (var i = 0; i < _froxels.Length; i++)
         {
-            for(int index=0; index<froxel.corners.Length;index++)
+            for (int index = 0; index < _froxels[i].corners.Length; index++)
             {
                 //froxel.corners[index] = lastFrameWorldToLocal.MultiplyPoint(froxel.corners[index]);
                 //froxel.corners[index] = _camera.transform.localToWorldMatrix.MultiplyPoint(froxel.corners[index]) ;
-                froxel.corners[index] = comb.MultiplyPoint3x4(froxel.corners[index]);
+                _froxels[i].corners[index] = comb.MultiplyPoint3x4(_froxels[i].corners[index]);
             }
+
+            _froxels[i].center = comb.MultiplyPoint3x4(_froxels[i].center);
         }
 
         lastFrameWorldToLocal = _camera.transform.worldToLocalMatrix;
     }
 
-    void AdjustFroxelsPosition()
+    void OrientFroxelsComputeShader()
     {
-        Vector3 moved = _camera.transform.position - froxelLastPositionOrigin;
-        froxelLastPositionOrigin = _camera.transform.position;
-        foreach (Frustum froxel in _froxels)
+        
+        for (var i = 0; i < _froxels.Length; i++)
         {
-            for(int index=0; index<froxel.corners.Length;index++)
-            {
-                //froxel.corners[index] += moved;
-            }
+            GetFlat(ref _froxels[i], ref ff[i]);
         }
+        
+        cb.SetData(ff);
+        orientCompute.SetBuffer(0,"froxels",cb);
+        Matrix4x4 comb = _camera.transform.localToWorldMatrix * lastFrameWorldToLocal;
+        orientCompute.SetMatrix("comb",comb);
+        
+        orientCompute.Dispatch(0,ff.Length/1024,1,1);
+        
+        cb.GetData(ff);
+        //cb.Dispose();
+        
+        for (var i = 0; i < _froxels.Length; i++)
+        {
+            GetFull(ref ff[i], ref _froxels[i]);
+        }
+        
+        lastFrameWorldToLocal = _camera.transform.worldToLocalMatrix;
     }
     
-    void DrawFrustum(Frustum f)
+//    void AdjustFroxelsPosition()
+//    {
+//        Vector3 moved = _camera.transform.position - froxelLastPositionOrigin;
+//        froxelLastPositionOrigin = _camera.transform.position;
+//        foreach (Frustum froxel in _froxels)
+//        {
+//            for(int index=0; index<froxel.corners.Length;index++)
+//            {
+//                //froxel.corners[index] += moved;
+//            }
+//        }
+//    }
+    
+    void DrawFrustum(Froxel f)
     {
         //farLeftBottom, farRightBottom, farLeftTop, farRightTop, nearLeftBottom, nearRightBottom, nearLeftTop, nearRightTop
         if (drawEdges)
@@ -516,28 +454,6 @@ public class Froxels : MonoBehaviour
 
     void RunScatteringCompute()
     {
-        
-//        RenderTexture textureInput = new RenderTexture(amount.x,amount.y,0,RenderTextureFormat.ARGBFloat,0);
-//        textureInput.dimension = TextureDimension.Tex3D;
-//        textureInput.volumeDepth = amount.z;
-//        //textureInput.filterMode = 
-//        textureInput.enableRandomWrite = true;
-//        RenderTexture textureOutput = new RenderTexture(amount.x,amount.y,0,RenderTextureFormat.ARGBFloat,0);
-//        textureOutput.dimension = TextureDimension.Tex3D;
-//        textureOutput.volumeDepth = amount.z;
-//        textureOutput.enableRandomWrite = true;
-
-
-//        scatteringInput.Release();
-//        scatteringOutput.Release();
-//        scatteringInput.width = scatteringOutput.width = amount.x;
-//        scatteringInput.height = scatteringOutput.height = amount.y;
-//        scatteringInput.volumeDepth = scatteringOutput.volumeDepth = amount.z;
-//        scatteringInput.enableRandomWrite = true;
-//        scatteringOutput.enableRandomWrite = true;
-//        scatteringInput.Create();
-//        scatteringOutput.Create();
-        //AdjustRenderTexture(scatteringInput);
         Vector4 size = new Vector4(scatteringInputWithShadows.width, scatteringInputWithShadows.height,
             scatteringInputWithShadows.volumeDepth, 0);
         
@@ -554,26 +470,22 @@ public class Froxels : MonoBehaviour
         scatteringCompute.SetInt("VOLUME_DEPTH",amount.z);
     }
 
-//    private void OnRenderImage(RenderTexture src, RenderTexture dest)
-//    {
-//        //renderMaterial.SetTexture();
-//        Graphics.Blit(src,dest,renderMaterial);
-//    }
-
     private void CalculateShadows()
     {
+        //var watch = System.Diagnostics.Stopwatch.StartNew();
+
         //TODO prepare rendertextures
         AdjustRenderTexture(scatteringInputWithShadows);
         AdjustRenderTexture(scatteringInput);
+        //watch.Stop();
+        //var elapsedMs = watch.ElapsedMilliseconds;
+        //Debug.Log(elapsedMs);
         
-        Vector3[] centers = new Vector3[_froxels.Length];
-        for (var i = 0; i < _froxels.Length; i++)
-        {
-            centers[i] = CalculateCenter(_froxels[i]);
-        }
-        shadowManager.CalculateShadows(scatteringInput, scatteringInputWithShadows, centers);
+        
+        shadowManager.CalculateShadows(scatteringInput, scatteringInputWithShadows, _froxels);
     }
 
+    
 
     public static void DrawPointCross (Vector3 centre, float radius, Color color) {
         Debug.DrawRay(new Vector3(centre.x-radius,centre.y,centre.z), new  Vector3(radius*2 ,0,0), color);
@@ -581,7 +493,7 @@ public class Froxels : MonoBehaviour
         Debug.DrawRay(new Vector3(centre.x,centre.y,centre.z-radius), new  Vector3(0 ,0,radius*2), color);
     }
 
-    public Vector3 CalculateCenter(Frustum f)
+    public Vector3 CalculateCenter(Froxel f)
     {
         Vector3 result = new Vector3(0,0,0);
         foreach (Vector3 corner in f.corners)
@@ -601,5 +513,44 @@ public class Froxels : MonoBehaviour
         r.volumeDepth = amount.z;
         r.enableRandomWrite = true;
         r.Create();
+    }
+
+    public static void GetFlat(ref Froxel f, ref FroxelFlat ff)
+    {
+        //FroxelFlat ff = new FroxelFlat
+        //{
+        ff.center = f.center;
+        ff.corner0 = f.corners[0];
+        ff.corner1 = f.corners[1];
+        ff.corner2 = f.corners[2];
+        ff.corner3 = f.corners[3];
+        ff.corner4 = f.corners[4];
+        ff.corner5 = f.corners[5];
+        ff.corner6 = f.corners[6];
+        ff.corner7 = f.corners[7];
+        //};
+        //return ff;
+    }
+    
+    public static void GetFull(ref FroxelFlat ff, ref Froxel f)
+    {
+        //Vector3[] corners = new Vector3[8];
+
+        f.corners[0] = ff.corner0;
+        f.corners[1] = ff.corner1;
+        f.corners[2] = ff.corner2;
+        f.corners[3] = ff.corner3;
+        f.corners[4] = ff.corner4;
+        f.corners[5] = ff.corner5;
+        f.corners[6] = ff.corner6;
+        f.corners[7] = ff.corner7;
+
+        f.center = ff.center;
+//        Froxel f = new Froxel
+//        {
+//            center = ff.center,
+//            corners = corners
+//        };
+        //return f;
     }
 }

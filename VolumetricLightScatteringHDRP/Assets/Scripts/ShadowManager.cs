@@ -24,7 +24,7 @@ public class ShadowManager : MonoBehaviour
         
     }
 
-    public void CalculateShadows(RenderTexture current, RenderTexture withShadows, Vector3[] points)
+    public void CalculateShadows(RenderTexture current, RenderTexture withShadows, Froxels.Froxel[] froxel)
     {
         Matrix4x4 scaleMatrix = Matrix4x4.identity;
         scaleMatrix.m22 = -1.0f;
@@ -38,18 +38,26 @@ public class ShadowManager : MonoBehaviour
         lightAccumulation.SetMatrix("vp",vp);
         lightAccumulation.SetMatrix("convertTo01",CreateConvertionMatrixMinus11To01());
         lightAccumulation.SetVector("Input_TexelSize",new Vector4(current.width,current.height,current.volumeDepth,0));
-        Vector4[] points4 = new Vector4[points.Length];
-        for (var i = 0; i < points.Length; i++)
+        
+        
+        //var watch = System.Diagnostics.Stopwatch.StartNew();
+        //TODO cache array and only change values to avoid GC every ~35 frames
+        Vector4[] points4 = new Vector4[froxel.Length];
+        for (var i = 0; i < froxel.Length; i++)
         {
-            points4[i] = points[i].ToVector4();
-            Vector4 tmp = vp * points4[i];
-            tmp /= tmp.w;
-            tmp = lightCamera.transform.localToWorldMatrix * tmp;
+            points4[i] = froxel[i].center.ToVector4();
+            //Vector4 tmp = vp * points4[i];
+            //tmp /= tmp.w;
+            //tmp = lightCamera.transform.localToWorldMatrix * tmp;
             //Froxels.DrawPointCross(tmp,0.1f,Color.magenta);
         }
+        
+//        watch.Stop();
+//        var elapsedMs = watch.ElapsedMilliseconds;
+//        Debug.Log(elapsedMs);
 
         //lightAccumulation.SetVectorArray("points", points4);
-        ComputeBuffer cb = new ComputeBuffer(points.Length,sizeof(float)*4);
+        ComputeBuffer cb = new ComputeBuffer(points4.Length,sizeof(float)*4);
         cb.SetData(points4);
         lightAccumulation.SetBuffer(kernelId,"points",cb);
         lightAccumulation.Dispatch(kernelId,current.height/8,current.width/8,current.volumeDepth/16);
