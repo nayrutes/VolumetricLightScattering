@@ -12,6 +12,8 @@ public class ShadowManager : MonoBehaviour
     public Vector3 DebugPoint;
     [Range(0,1.0f)]
     public float DebugDepth;
+
+    private Vector4[] points4;
     // Start is called before the first frame update
     void Start()
     {
@@ -24,13 +26,24 @@ public class ShadowManager : MonoBehaviour
         
     }
 
-    public void CalculateShadows(RenderTexture current, RenderTexture withShadows, Froxels.Froxel[] froxel)
+    public void SetUp(int froxelCount)
+    {
+        points4 = new Vector4[froxelCount];
+        for (var i = 0; i < points4.Length; i++)
+        {
+            points4[i] = new Vector4(0,0,0,1);
+        }
+    }
+    
+    public void CalculateShadows(RenderTexture current, RenderTexture withShadows, Froxels.Froxel[] froxel, bool enableTransformedChilds)
     {
         Matrix4x4 scaleMatrix = Matrix4x4.identity;
         scaleMatrix.m22 = -1.0f;
         //Matrix4x4 v = scaleMatrix * lightCamera.transform.worldToLocalMatrix;
         //Matrix4x4 vp = lightCamera.cam.projectionMatrix * v;
-        Matrix4x4 vp = lightCamera.cam.projectionMatrix * scaleMatrix * lightCamera.cam.transform.worldToLocalMatrix;
+        Matrix4x4 vp;
+        
+        vp = lightCamera.cam.projectionMatrix * scaleMatrix * lightCamera.cam.transform.worldToLocalMatrix;
         int kernelId = lightAccumulation.FindKernel("CSMain");
         lightAccumulation.SetTexture( kernelId, "Input", current);
         lightAccumulation.SetTexture( kernelId, "Result", withShadows);
@@ -41,15 +54,21 @@ public class ShadowManager : MonoBehaviour
         
         
         //var watch = System.Diagnostics.Stopwatch.StartNew();
-        //TODO cache array and only change values to avoid GC every ~35 frames
-        Vector4[] points4 = new Vector4[froxel.Length];
+        
         for (var i = 0; i < froxel.Length; i++)
         {
-            points4[i] = froxel[i].center.ToVector4();
-            //Vector4 tmp = vp * points4[i];
-            //tmp /= tmp.w;
-            //tmp = lightCamera.transform.localToWorldMatrix * tmp;
-            //Froxels.DrawPointCross(tmp,0.1f,Color.magenta);
+            if (enableTransformedChilds)
+            {
+                froxel[i].goT.position.ToVector4(ref points4[i]);
+            }
+            else
+            {
+                //froxel[i].center.ToVector4(ref points4[i]);
+                points4[i].x = froxel[i].center.x;
+                points4[i].y = froxel[i].center.y;
+                points4[i].z = froxel[i].center.z;
+                points4[i].w = 1;
+            }
         }
         
 //        watch.Stop();
@@ -94,4 +113,11 @@ public static class Extensions
         return new Vector4(v.x,v.y,v.z,1);
     }
     
+    public static void ToVector4(this Vector3 v, ref Vector4 v4)
+    {
+        v4.x = v.x;
+        v4.y = v.y;
+        v4.z = v.z;
+        v4.w = 1;
+    }
 }

@@ -5,22 +5,37 @@
 // with cs.SetTexture
 RWTexture3D<float4> Input;
 RWTexture3D<float4> Result;
+Texture2D<float4> CamDepth;
+SamplerState samplerCamDepth;
+StructuredBuffer<float> depths;
 uint VOLUME_DEPTH;
 float4 insetValue;
 float3 size;
 
 //Beer-Lambert's Law?
 //One Step
-float4 AccumulateScattering(float4 colorAndDensityFront, float4 colorAndDensityBack)
+float4 AccumulateScattering(float4 colorAndDensityFront, float4 colorAndDensityBack, in float depth)
 {
-    float3 light = colorAndDensityFront.rgb + saturate(exp(-colorAndDensityFront.a))*colorAndDensityBack.rgb;
-    return float4(light.rgb, colorAndDensityFront.a + colorAndDensityBack.a);
+    float densityFront = colorAndDensityFront.a;
+    float densityBack = colorAndDensityBack.a ;
+    float3 colorFront = colorAndDensityFront.rgb;
+    float3 colorBack = colorAndDensityBack.rgb;
+    
+    float factorColorBack = saturate(exp(-densityFront));
+    float3 light = colorFront + factorColorBack*colorBack;
+    return float4(light.rgb, (densityFront + densityBack)*(1-depth));
+    
+    //float3 light = colorAndDensityFront.rgb + saturate(exp(-colorAndDensityFront.a))*colorAndDensityBack.rgb;
+    //return float4(light.rgb, colorAndDensityFront.a + colorAndDensityBack.a);
 }
 
 //Write Out Final Scattering Value
-void WriteOutput(in uint3 pos, in float4 colorAndDensity)
+void WriteOutput(in uint3 pos, in float4 colorAndDensity, in float depth)
 {
-    float4 finalValue = float4(colorAndDensity.rgb, exp(-colorAndDensity.a));
+    float density = colorAndDensity.a;
+    float3 color = colorAndDensity.rgb;
+
+    float4 finalValue = float4(color.rgb, exp(-density));
     Result[pos].rgba = finalValue;
 }
 
@@ -52,16 +67,30 @@ void CSMain (uint3 id : SV_DispatchThreadID)
             }
         }
     }*/
-    
-    float4 currentSliceValue = Input[uint3(id.xy,0)].rgba;
-    WriteOutput(uint3(id.xy,0),currentSliceValue);
+    float depth = 0;
+    float4 currentSliceValue = Input[uint3(id.xy,VOLUME_DEPTH)].rgba;
+    WriteOutput(uint3(id.xy,0),currentSliceValue, depth);
+    float xn = ((float)id.x)/((float)size.x);
+    float yn = ((float)id.y)/((float)size.y);
+    float depthCam = CamDepth.SampleLevel(samplerCamDepth,float2(xn,yn),0).r;
     
     for(uint z = 1; z < VOLUME_DEPTH;z++)
     {
+        float depthDelta = depths[z] - depths[z-1];
         uint zTmp = z;
-        float4 nextValue = Input[uint3(id.xy, zTmp)].rgba;
-        currentSliceValue = AccumulateScattering(currentSliceValue, nextValue);
-        WriteOutput(uint3(id.xy, zTmp), currentSliceValue);
+         
+        /*if(1-depthCam < depths[z])
+        {
+            currentSliceValue = float4(1,1,1,0);
+            WriteOutput(uint3(id.xy, zTmp), currentSliceValue, depthDelta);
+            
+        }
+        else*/
+        {
+            float4 nextValue = Input[uint3(id.xy, zTmp)].rgba;
+            currentSliceValue = AccumulateScattering(currentSliceValue, nextValue, depthDelta);
+            WriteOutput(uint3(id.xy, zTmp), currentSliceValue, depthDelta);
+        }           
     }
     
 }

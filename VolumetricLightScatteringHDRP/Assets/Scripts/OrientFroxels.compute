@@ -14,14 +14,14 @@ struct FroxelFlat
 {
     //public Frustum frustum;
      float3 center;
-     float3 corner0;
-     float3 corner1;
-     float3 corner2;
-     float3 corner3;
-     float3 corner4;
-     float3 corner5;
-     float3 corner6;
-     float3 corner7;
+     //float3 corner0;
+     //float3 corner1;
+     //float3 corner2;
+     //float3 corner3;
+     //float3 corner4;
+     //float3 corner5;
+     //float3 corner6;
+     //float3 corner7;
 };
 
 RWTexture2D<float4> Result;
@@ -36,14 +36,14 @@ void CSMain (uint3 id : SV_DispatchThreadID)
         froxels[id.x].corners[index] = mul(comb,froxels[id.x].corners[index]);// comb.MultiplyPoint3x4(froxels[id.x].corners[index]);
     }*/
     
-    froxels[id.x].corner0 = float3(mul(comb,float4(froxels[id.x].corner0,1)).xyz);
-    froxels[id.x].corner1 = float3(mul(comb,float4(froxels[id.x].corner1,1)).xyz);
-    froxels[id.x].corner2 = float3(mul(comb,float4(froxels[id.x].corner2,1)).xyz);
-    froxels[id.x].corner3 = float3(mul(comb,float4(froxels[id.x].corner3,1)).xyz);
-    froxels[id.x].corner4 = float3(mul(comb,float4(froxels[id.x].corner4,1)).xyz);
-    froxels[id.x].corner5 = float3(mul(comb,float4(froxels[id.x].corner5,1)).xyz);
-    froxels[id.x].corner6 = float3(mul(comb,float4(froxels[id.x].corner6,1)).xyz);
-    froxels[id.x].corner7 = float3(mul(comb,float4(froxels[id.x].corner7,1)).xyz);
+    //froxels[id.x].corner0 = float3(mul(comb,float4(froxels[id.x].corner0,1)).xyz);
+    //froxels[id.x].corner1 = float3(mul(comb,float4(froxels[id.x].corner1,1)).xyz);
+    //froxels[id.x].corner2 = float3(mul(comb,float4(froxels[id.x].corner2,1)).xyz);
+    //froxels[id.x].corner3 = float3(mul(comb,float4(froxels[id.x].corner3,1)).xyz);
+    //froxels[id.x].corner4 = float3(mul(comb,float4(froxels[id.x].corner4,1)).xyz);
+    //froxels[id.x].corner5 = float3(mul(comb,float4(froxels[id.x].corner5,1)).xyz);
+    //froxels[id.x].corner6 = float3(mul(comb,float4(froxels[id.x].corner6,1)).xyz);
+    //froxels[id.x].corner7 = float3(mul(comb,float4(froxels[id.x].corner7,1)).xyz);
 
 
     froxels[id.x].center =float3(mul(comb,float4(froxels[id.x].center,1)).xyz);//comb.MultiplyPoint3x4(froxels[id.x].center);

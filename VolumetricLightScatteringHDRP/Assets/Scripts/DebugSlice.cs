@@ -61,36 +61,7 @@ public class DebugSlice : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (!texture3DToSlice.enableRandomWrite)
-        {
-            texture3DToSlice.Release();
-            texture3DToSlice.enableRandomWrite = true;
-            texture3DToSlice.Create();
-        }
-        if (debugRenderTexture == null)
-        {
-            debugRenderTexture = new RenderTexture(texture3DToSlice.descriptor)
-            {
-                dimension = TextureDimension.Tex2D, enableRandomWrite = true
-            };
-            debugRenderTexture.Create();
-        }
-        if (!debugRenderTexture.enableRandomWrite)
-        {
-            debugRenderTexture.Release();
-            debugRenderTexture.enableRandomWrite = true;
-            debugRenderTexture.Create();
-        }
-
-        debugRenderTexture.filterMode = FilterMode.Point;
         
-        if (syncSliceWithFroxel)
-        {
-            int sliceT = _froxels.singleFroxel.z;
-            slice = 1-(sliceT / (float)texture3DToSlice.volumeDepth);
-        }
-        sliceInt = (int) ((1-slice) * texture3DToSlice.volumeDepth);
-        slice_ = sliceInt;
         //if (sliceTmp != sliceInt)
         
         if (switchTo2D)
@@ -99,6 +70,37 @@ public class DebugSlice : MonoBehaviour
         }
         else
         {
+            if (!texture3DToSlice.enableRandomWrite)
+            {
+                texture3DToSlice.Release();
+                texture3DToSlice.enableRandomWrite = true;
+                texture3DToSlice.Create();
+            }
+            if (debugRenderTexture == null)
+            {
+                debugRenderTexture = new RenderTexture(texture3DToSlice.descriptor)
+                {
+                    dimension = TextureDimension.Tex2D, enableRandomWrite = true
+                };
+                debugRenderTexture.Create();
+            }
+            if (!debugRenderTexture.enableRandomWrite)
+            {
+                debugRenderTexture.Release();
+                debugRenderTexture.enableRandomWrite = true;
+                debugRenderTexture.Create();
+            }
+
+            debugRenderTexture.filterMode = FilterMode.Point;
+        
+            if (syncSliceWithFroxel)
+            {
+                int sliceT = _froxels.singleFroxel.z;
+                slice = 1-(sliceT / (float)texture3DToSlice.volumeDepth);
+            }
+            sliceInt = (int) ((1-slice) * texture3DToSlice.volumeDepth);
+            slice_ = sliceInt;
+            
             Slice();
         }
     

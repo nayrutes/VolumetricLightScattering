@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using UnityEditor;
@@ -8,6 +9,7 @@ using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.HighDefinition;
 using UnityEngine.Serialization;
+using Debug = UnityEngine.Debug;
 
 //[ExecuteInEditMode]
 public class Froxels : MonoBehaviour
@@ -19,8 +21,11 @@ public class Froxels : MonoBehaviour
     [SerializeField] private RenderTexture scatteringInput;
     [SerializeField] private RenderTexture scatteringInputWithShadows;
     [SerializeField] private RenderTexture scatteringOutput;
+    [SerializeField] private RenderTexture camDepthTexture;
+    [SerializeField] private RenderTexture scatteringResult2D;
+    [SerializeField] private Material from3DTo2D;
     //[SerializeField] private Material renderMaterial;
-    [SerializeField] private Material fullScreenPassHdrpMaterial;
+    //[SerializeField] private Material fullScreenPassHdrpMaterial;
     [SerializeField] private ComputeShader orientCompute;
     [SerializeField] private Vector4 insetValue;
     [SerializeField] private ShadowManager shadowManager;
@@ -37,13 +42,16 @@ public class Froxels : MonoBehaviour
     public bool enableScatteringCompute = true;
     public bool enableGenerateFroxelsEveryFrame = true;
     public bool enableCalculateShadows = true;
+    public bool enableTransformedChilds = true;
     
     [SerializeField] private AnimationCurve depthDistribution;
     
     private Camera _camera;
     private Froxel[] _froxels;
+    private float[] depths;
     private FroxelFlat[] ff;
     ComputeBuffer cb;
+    private List<GameObject> pointsGos = new List<GameObject>();
     
     private DebugSlice _debugSlice;
     private Vector3 froxelLastPositionOrigin;
@@ -53,20 +61,21 @@ public class Froxels : MonoBehaviour
         //public Frustum frustum;
         public Vector3 center;
         public Vector3[] corners; // Positions of the 8 corners
+        public Transform goT;
     }
     
     public struct FroxelFlat
     {
         //public Frustum frustum;
         public Vector3 center;
-        public Vector3 corner0; // Positions of the 8 corners
-        public Vector3 corner1;
-        public Vector3 corner2;
-        public Vector3 corner3;
-        public Vector3 corner4;
-        public Vector3 corner5;
-        public Vector3 corner6;
-        public Vector3 corner7;
+//        public Vector3 corner0; // Positions of the 8 corners
+//        public Vector3 corner1;
+//        public Vector3 corner2;
+//        public Vector3 corner3;
+//        public Vector3 corner4;
+//        public Vector3 corner5;
+//        public Vector3 corner6;
+//        public Vector3 corner7;
     }
     
     void Start()
@@ -81,14 +90,21 @@ public class Froxels : MonoBehaviour
     void Update()
     {
         DrawOutlineFrustrum();
-        if(enableGenerateFroxelsEveryFrame)
+        if (enableGenerateFroxelsEveryFrame)
+        {
+            //destroy old points
+            foreach (GameObject g in pointsGos)
+            {
+                Destroy(g);
+            }
             //GenerateFroxels();
             GenerateFroxelsInWorldSpace();
+        }
         else
         {
-            if (orientFroxels)
+            if (orientFroxels && !enableTransformedChilds)
             {
-                //OrientFroxels();
+                //not necessary with transform in child
                 OrientFroxelsComputeShader();
             }
         }
@@ -116,10 +132,20 @@ public class Froxels : MonoBehaviour
         {
             scatteringInputWithShadows = scatteringInput;
         }
-        if(enableScatteringCompute)
+
+        if (enableScatteringCompute)
+        {
+            camDepthTexture.Release();
+            camDepthTexture.width = _camera.scaledPixelWidth;
+            camDepthTexture.height = _camera.scaledPixelHeight;
+            camDepthTexture.Create();
+            _camera.targetTexture = camDepthTexture;
+            _camera.Render();
+            _camera.targetTexture = null;
             RunScatteringCompute();
+        }
         
-        
+        From3DTo2D();
         
         //fullScreenPassHdrpMaterial.SetVector("_Amount", new Vector4(amount.x,amount.y,amount.z,0));
         //fullScreenPassHdrpMaterial.SetTexture("VolumetricFogSampler",scatteringOutput);
@@ -150,10 +176,20 @@ public class Froxels : MonoBehaviour
 
     private void GenerateFroxelsInWorldSpace()
     {
+        depths = new float[amount.z+1];
+        for (int z = 0; z <= amount.z; z++)
+        {
+            float zl = Mathf.InverseLerp(0, amount.z, z);
+            zl = CreateNonLinear(zl);
+            depths[z] = zl;
+        }
+        
+        
         lastFrameWorldToLocal = _camera.transform.worldToLocalMatrix;
         _froxels = new Froxel[amount.x*amount.y*amount.z];
         ff = new FroxelFlat[_froxels.Length];
-        cb = new ComputeBuffer(ff.Length,sizeof(float)*3+sizeof(float)*3*8);
+        cb = new ComputeBuffer(ff.Length,sizeof(float)*3/*+sizeof(float)*3*8*/);
+        shadowManager.SetUp(_froxels.Length);
         
         Vector3[] fC = new Vector3[4];
         Vector3[] nC = new Vector3[4];
@@ -170,8 +206,7 @@ public class Froxels : MonoBehaviour
                 float yl = Mathf.InverseLerp(0, amount.y, y);
                 for (int z = 0; z <= amount.z; z++)
                 {
-                    float zl = Mathf.InverseLerp(0, amount.z, z);
-                    zl = CreateNonLinear(zl);
+                    float zl = depths[z];
                     Vector3 point = InterP(new Vector3(xl, yl, zl), nC, fC);
 
                     point = _camera.transform.localToWorldMatrix.MultiplyPoint3x4(point);
@@ -207,12 +242,24 @@ public class Froxels : MonoBehaviour
                     Froxel froxel = new Froxel();
                     froxel.corners = corners;
                     froxel.center = CalculateCenter(froxel);
+                    GameObject go =SpawnPointChild(froxel.center);
+                    froxel.goT = go.transform;
+                    pointsGos.Add(go);
                     _froxels[z * ((amount.x) * (amount.y)) + y * (amount.x) + x]= froxel;
                 }
             }
         }
     }
-
+    
+    private GameObject SpawnPointChild(Vector3 point)
+    {
+        GameObject go = new GameObject();
+        GameObject inst = Instantiate(go, point, new Quaternion(0,0,0,0), this.transform);
+        inst.name = $"point - {point.ToString()}";
+        Destroy(go);
+        return inst;
+    }
+    
     private Vector3 InterP(Vector3 iL, Vector3[] nPC, Vector3[] fPC)
     {
         Vector3 onXNear1 = Vector3.Lerp(nPC[0], nPC[3], iL.x);
@@ -351,13 +398,25 @@ public class Froxels : MonoBehaviour
 
     void OrientFroxelsComputeShader()
     {
-        
+        //var stopwatch = new Stopwatch();
+        //stopwatch.Start();
         for (var i = 0; i < _froxels.Length; i++)
         {
-            GetFlat(ref _froxels[i], ref ff[i]);
+            //GetFlat(ref _froxels[i], ref ff[i]);
+            ff[i].center = _froxels[i].center;
+//            ff[i].corner0 = _froxels[i].corners[0];
+//            ff[i].corner1 = _froxels[i].corners[1];
+//            ff[i].corner2 = _froxels[i].corners[2];
+//            ff[i].corner3 = _froxels[i].corners[3];
+//            ff[i].corner4 = _froxels[i].corners[4];
+//            ff[i].corner5 = _froxels[i].corners[5];
+//            ff[i].corner6 = _froxels[i].corners[6];
+//            ff[i].corner7 = _froxels[i].corners[7];
         }
-        
+        //Debug.Log("in1: "+stopwatch.ElapsedMilliseconds);
         cb.SetData(ff);
+        //Debug.Log("in2: "+stopwatch.ElapsedMilliseconds);
+        
         orientCompute.SetBuffer(0,"froxels",cb);
         Matrix4x4 comb = _camera.transform.localToWorldMatrix * lastFrameWorldToLocal;
         orientCompute.SetMatrix("comb",comb);
@@ -366,12 +425,23 @@ public class Froxels : MonoBehaviour
         
         cb.GetData(ff);
         //cb.Dispose();
-        
+        //Debug.Log("out1: "+stopwatch.ElapsedMilliseconds);
         for (var i = 0; i < _froxels.Length; i++)
         {
-            GetFull(ref ff[i], ref _froxels[i]);
+            //GetFull(ref ff[i], ref _froxels[i]);
+//            _froxels[i].corners[0] = ff[i].corner0;
+//            _froxels[i].corners[1] = ff[i].corner1;
+//            _froxels[i].corners[2] = ff[i].corner2;
+//            _froxels[i].corners[3] = ff[i].corner3;
+//            _froxels[i].corners[4] = ff[i].corner4;
+//            _froxels[i].corners[5] = ff[i].corner5;
+//            _froxels[i].corners[6] = ff[i].corner6;
+//            _froxels[i].corners[7] = ff[i].corner7;
+
+            _froxels[i].center = ff[i].center;
         }
-        
+        //stopwatch.Stop();
+        //Debug.Log("out2: "+stopwatch.ElapsedMilliseconds);
         lastFrameWorldToLocal = _camera.transform.worldToLocalMatrix;
     }
     
@@ -387,11 +457,17 @@ public class Froxels : MonoBehaviour
 //            }
 //        }
 //    }
-    
+
+    private void From3DTo2D()
+    {
+        //AdjustRenderTexture(scatteringResult2D, false, false);
+        Graphics.Blit(null,scatteringResult2D,from3DTo2D);
+    }
+
     void DrawFrustum(Froxel f)
     {
         //farLeftBottom, farRightBottom, farLeftTop, farRightTop, nearLeftBottom, nearRightBottom, nearLeftTop, nearRightTop
-        if (drawEdges)
+        if (drawEdges && !enableTransformedChilds)
         {
             Debug.DrawLine(f.corners[4], f.corners[0],Color.cyan);
             Debug.DrawLine(f.corners[5], f.corners[1],Color.cyan);
@@ -409,7 +485,7 @@ public class Froxels : MonoBehaviour
             Debug.DrawLine(f.corners[1], f.corners[3],Color.cyan);
         }
 
-        if (drawCorners)
+        if (drawCorners && !enableTransformedChilds)
         {
 //            foreach (Vector3 corner in f.corners)
 //            {
@@ -429,6 +505,11 @@ public class Froxels : MonoBehaviour
             DrawPointCross(f.corners[5],0.2f,new Color(1,0,0));
             DrawPointCross(f.corners[6],0.2f,new Color(0,1,0));
             DrawPointCross(f.corners[7],0.2f,new Color(1,1,0));
+        }
+
+        if (enableTransformedChilds)
+        {
+            DrawPointCross(f.goT.position,0.2f,new Color(0.5f,0.5f,0.5f));
         }
     }
 
@@ -461,13 +542,17 @@ public class Froxels : MonoBehaviour
         
         scatteringCompute.SetTexture(0, "Input",scatteringInputWithShadows);
         scatteringCompute.SetTexture(0, "Result",scatteringOutput);
+        scatteringCompute.SetTexture(0,"CamDepth",camDepthTexture);
         scatteringCompute.SetVector("insetValue",insetValue);
         scatteringCompute.SetVector("size", size);
-        
+        ComputeBuffer cb2 = new ComputeBuffer(depths.Length,sizeof(float));
+        cb2.SetData(depths);
+        scatteringCompute.SetBuffer(0,"depths",cb2);
         //int threadGroupsX = amount.z / 256;
+        scatteringCompute.SetInt("VOLUME_DEPTH",amount.z);
         scatteringCompute.Dispatch(0, (int)(size.x/32.0f),(int)(size.y/32.0f),1);
         
-        scatteringCompute.SetInt("VOLUME_DEPTH",amount.z);
+        cb2.Dispose();
     }
 
     private void CalculateShadows()
@@ -482,7 +567,7 @@ public class Froxels : MonoBehaviour
         //Debug.Log(elapsedMs);
         
         
-        shadowManager.CalculateShadows(scatteringInput, scatteringInputWithShadows, _froxels);
+        shadowManager.CalculateShadows(scatteringInput, scatteringInputWithShadows, _froxels, enableTransformedChilds);
     }
 
     
@@ -505,52 +590,54 @@ public class Froxels : MonoBehaviour
         return result;
     }
 
-    private void AdjustRenderTexture(RenderTexture r)
+    private void AdjustRenderTexture(RenderTexture r, bool depth = true, bool randomwrite = true)
     {
         r.Release();
         r.width = amount.x;
         r.height = amount.y;
-        r.volumeDepth = amount.z;
-        r.enableRandomWrite = true;
+        if(depth)
+            r.volumeDepth = amount.z;
+        if(randomwrite)
+            r.enableRandomWrite = true;
         r.Create();
     }
 
-    public static void GetFlat(ref Froxel f, ref FroxelFlat ff)
-    {
-        //FroxelFlat ff = new FroxelFlat
-        //{
-        ff.center = f.center;
-        ff.corner0 = f.corners[0];
-        ff.corner1 = f.corners[1];
-        ff.corner2 = f.corners[2];
-        ff.corner3 = f.corners[3];
-        ff.corner4 = f.corners[4];
-        ff.corner5 = f.corners[5];
-        ff.corner6 = f.corners[6];
-        ff.corner7 = f.corners[7];
-        //};
-        //return ff;
-    }
-    
-    public static void GetFull(ref FroxelFlat ff, ref Froxel f)
-    {
-        //Vector3[] corners = new Vector3[8];
-
-        f.corners[0] = ff.corner0;
-        f.corners[1] = ff.corner1;
-        f.corners[2] = ff.corner2;
-        f.corners[3] = ff.corner3;
-        f.corners[4] = ff.corner4;
-        f.corners[5] = ff.corner5;
-        f.corners[6] = ff.corner6;
-        f.corners[7] = ff.corner7;
-
-        f.center = ff.center;
-//        Froxel f = new Froxel
-//        {
-//            center = ff.center,
-//            corners = corners
-//        };
-        //return f;
-    }
+//    public static void GetFlat(ref Froxel f, ref FroxelFlat ff)
+//    {
+//        //FroxelFlat ff = new FroxelFlat
+//        //{
+//        ff.center = f.center;
+//        ff.corner0 = f.corners[0];
+//        ff.corner1 = f.corners[1];
+//        ff.corner2 = f.corners[2];
+//        ff.corner3 = f.corners[3];
+//        ff.corner4 = f.corners[4];
+//        ff.corner5 = f.corners[5];
+//        ff.corner6 = f.corners[6];
+//        ff.corner7 = f.corners[7];
+//        //};
+//        //return ff;
+//    }
+//    
+//    public static void GetFull(ref FroxelFlat ff, ref Froxel f)
+//    {
+//        //Vector3[] corners = new Vector3[8];
+//
+//        f.corners[0] = ff.corner0;
+//        f.corners[1] = ff.corner1;
+//        f.corners[2] = ff.corner2;
+//        f.corners[3] = ff.corner3;
+//        f.corners[4] = ff.corner4;
+//        f.corners[5] = ff.corner5;
+//        f.corners[6] = ff.corner6;
+//        f.corners[7] = ff.corner7;
+//
+//        f.center = ff.center;
+////        Froxel f = new Froxel
+////        {
+////            center = ff.center,
+////            corners = corners
+////        };
+//        //return f;
+//    }
 }
