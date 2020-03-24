@@ -22,6 +22,7 @@ public class DebugSlice : MonoBehaviour
     [SerializeField] private float slice;
 
     [SerializeField] private bool syncSliceWithFroxel;
+    [SerializeField] private bool alphaToWhite;
     
     [Header("Feedback")] [SerializeField] private int slice_;
     //[Range(0,256)]
@@ -61,8 +62,17 @@ public class DebugSlice : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+
+        if (alphaToWhite)
+        {
+            debugMaterial.SetFloat("alphaToWhite", 1);
+        }
+        else
+        {
+            debugMaterial.SetFloat("alphaToWhite", 0);
+        }
         
-        //if (sliceTmp != sliceInt)
+        
         
         if (switchTo2D)
         {
@@ -95,10 +105,14 @@ public class DebugSlice : MonoBehaviour
         
             if (syncSliceWithFroxel)
             {
-                int sliceT = _froxels.singleFroxel.z;
-                slice = 1-(sliceT / (float)texture3DToSlice.volumeDepth);
+                sliceInt = _froxels.singleFroxel.z;
+                slice = (sliceInt / (float)texture3DToSlice.volumeDepth);
             }
-            sliceInt = (int) ((1-slice) * texture3DToSlice.volumeDepth);
+            else
+            {
+                sliceInt = (int)(slice * (float)texture3DToSlice.volumeDepth);
+            }
+            //sliceInt = (int) ((1-slice) * texture3DToSlice.volumeDepth);
             slice_ = sliceInt;
             
             Slice();

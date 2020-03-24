@@ -1,9 +1,12 @@
 ﻿// Each #kernel tells which function to compile; you can have many kernels
 #pragma kernel CSMain
 
+#include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Common.hlsl"
+
 // Create a RenderTexture with enableRandomWrite flag and set it
 // with cs.SetTexture
-RWTexture3D<float4> Input;
+RWTexture3D<float4> DensityBuffer;
+RWTexture3D<float4> LightBuffer;
 RWTexture3D<float4> Result;
 Texture2D<float4> CamDepth;
 SamplerState samplerCamDepth;
@@ -11,6 +14,7 @@ StructuredBuffer<float> depths;
 uint VOLUME_DEPTH;
 float4 insetValue;
 float3 size;
+float4 _ZBufferParams;
 
 //Beer-Lambert's Law?
 //One Step
@@ -43,10 +47,20 @@ void Insert(){
     for (int xx = 0; xx < size.x; xx++) {
         for (int yy = 0; yy < size.y; yy++) {
             for (int zz = 0; zz < size.z; zz++) {
-            Input[uint3(xx,yy,zz)] = insetValue;
+            DensityBuffer[uint3(xx,yy,zz)] = insetValue;
             }
         }
     }
+}
+
+float3 EvaluateLight(float extinction, float intervalLength, float3 voxelCoordBuffer)
+{
+    float4 lightColor = LOAD_TEXTURE3D(LightBuffer, voxelCoordBuffer);
+    //float4 lightColor = float4(0.5,0.5,0.5,1);
+    //transmittance from optical depth
+    float weight = exp(-(extinction * intervalLength));
+    float ligtIntensity = lightColor.a;
+    return (weight * lightColor.rgb)*ligtIntensity; //is it falloff?
 }
 
 [numthreads(32,32,1)]
@@ -55,42 +69,74 @@ void CSMain (uint3 id : SV_DispatchThreadID)
     //actual calculation
     /*for (uint x=0; x<size.x; x++){
         for (uint y=0; y<size.y; y++){
-            float4 currentSliceValue = Input[uint3(x,y,0)].rgba;
+            float4 currentSliceValue = DensityBuffer[uint3(x,y,0)].rgba;
             WriteOutput(uint3(x,y,0),currentSliceValue);
             
             for(uint z = 1; z < VOLUME_DEPTH;z++)
             {
                 uint zTmp = z;
-                float4 nextValue = Input[uint3(x,y, zTmp)].rgba;
+                float4 nextValue = DensityBuffer[uint3(x,y, zTmp)].rgba;
                 currentSliceValue = AccumulateScattering(currentSliceValue, nextValue);
                 WriteOutput(uint3(x,y, zTmp), currentSliceValue);
             }
         }
     }*/
+#if 0
     float depth = 0;
-    float4 currentSliceValue = Input[uint3(id.xy,VOLUME_DEPTH)].rgba;
+    float4 currentSliceValue = DensityBuffer[uint3(id.xy,VOLUME_DEPTH)].rgba;
     WriteOutput(uint3(id.xy,0),currentSliceValue, depth);
     float xn = ((float)id.x)/((float)size.x);
     float yn = ((float)id.y)/((float)size.y);
     float depthCam = CamDepth.SampleLevel(samplerCamDepth,float2(xn,yn),0).r;
+    float depthCamLin = Linear01Depth(depthCam, _ZBufferParams);
+    
     
     for(uint z = 1; z < VOLUME_DEPTH;z++)
     {
+        //Result[uint3(id.xy,z)].rgba = float4(depthCamLin,0,0,0.5);
         float depthDelta = depths[z] - depths[z-1];
         uint zTmp = z;
-         
-        /*if(1-depthCam < depths[z])
+        /*if((1.0-depthCamLin) > depths[z])
         {
-            currentSliceValue = float4(1,1,1,0);
+            currentSliceValue = float4(0,0,0,0);
             WriteOutput(uint3(id.xy, zTmp), currentSliceValue, depthDelta);
-            
+            //Result[uint3(id.xy,z)].rgba = float4(0,0,0,1);
         }
         else*/
         {
-            float4 nextValue = Input[uint3(id.xy, zTmp)].rgba;
+            float4 nextValue = DensityBuffer[uint3(id.xy, zTmp)].rgba;
             currentSliceValue = AccumulateScattering(currentSliceValue, nextValue, depthDelta);
             WriteOutput(uint3(id.xy, zTmp), currentSliceValue, depthDelta);
         }           
     }
+ #else
+    float sliceDepthNear = depths[0];
+    float3 totalRadiance = 0;
+    float  opticalDepth  = 0;
     
+    for(uint z = 1; z < VOLUME_DEPTH;z++)
+    {
+        float sliceDepthFar = depths[z];
+        float sliceDepthDelta = sliceDepthFar - sliceDepthNear;
+        //float xn = ((float)id.x)/((float)size.x);
+        //float yn = ((float)id.y)/((float)size.y);
+        uint3 voxelCoordBuffer = uint3(id.x,id.y, z);
+        float4 density = LOAD_TEXTURE3D(DensityBuffer, voxelCoordBuffer);
+
+        float3 scattering = density.rgb;
+        float  extinction = density.a;
+        
+        float3 light = EvaluateLight(extinction, sliceDepthDelta, voxelCoordBuffer);
+        float4 blendValue = float4(light,  extinction * sliceDepthDelta);
+        float transmittance = exp(-opticalDepth);
+        float phase = 1;
+        float3 probeRadiance = float3(0,0,0);
+        totalRadiance += transmittance * scattering * (phase * blendValue.rgb + probeRadiance);
+        opticalDepth += 0.5 * blendValue.a;
+        //Result[voxelCoordBuffer] = float4(totalRadiance, opticalDepth);
+        Result[voxelCoordBuffer] = float4(totalRadiance, opticalDepth);
+        opticalDepth += 0.5 * blendValue.a;
+        sliceDepthNear = sliceDepthFar;
+    }
+ #endif
 }

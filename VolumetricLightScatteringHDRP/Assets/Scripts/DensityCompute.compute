@@ -1,0 +1,36 @@
+﻿// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel CSMain
+
+// Create a RenderTexture with enableRandomWrite flag and set it
+// with cs.SetTexture
+RWTexture3D<float4> densityBufferTexture;
+//Texture2D<float4> LightDepth;
+//SamplerState samplerLightDepth;
+//float4x4 vp;
+//float4x4 convertTo01;
+StructuredBuffer<float4> points;
+float4 Input_TexelSize;
+
+
+//singleFroxel.z * (amount.x * amount.y) + singleFroxel.y * amount.x + singleFroxel.x
+uint flat(uint3 id)
+{
+    return id.z * (Input_TexelSize.x * Input_TexelSize.y) + id.y * Input_TexelSize.x + id.x;
+}
+
+
+float3 WorldToProjectedLocal(float3 p)
+{
+    float4 p4 = float4(p.xyz,1);
+    return p4;
+}
+
+[numthreads(8,8,16)]
+void CSMain (uint3 id : SV_DispatchThreadID)
+{
+    float3 pointWS = points[flat(id)];
+    float yfactor = ((pointWS.y%2)/2);
+    float fog=0.2*yfactor;
+    densityBufferTexture[id] = float4(fog,fog,fog,0.5);
+    densityBufferTexture[id] = float4(0.5,0.5,0.5,0.5);
+}

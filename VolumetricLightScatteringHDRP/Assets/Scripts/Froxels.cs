@@ -19,7 +19,8 @@ public class Froxels : MonoBehaviour
 
     [SerializeField] private ComputeShader scatteringCompute;
     [SerializeField] private RenderTexture scatteringInput;
-    [SerializeField] private RenderTexture scatteringInputWithShadows;
+    [FormerlySerializedAs("scatteringInputWithShadows")] [SerializeField] private RenderTexture densityBufferTexture;
+    [SerializeField] private RenderTexture lightBufferTexture;
     [SerializeField] private RenderTexture scatteringOutput;
     [SerializeField] private RenderTexture camDepthTexture;
     [SerializeField] private RenderTexture scatteringResult2D;
@@ -27,6 +28,7 @@ public class Froxels : MonoBehaviour
     //[SerializeField] private Material renderMaterial;
     //[SerializeField] private Material fullScreenPassHdrpMaterial;
     [SerializeField] private ComputeShader orientCompute;
+    [SerializeField] private ComputeShader densityCompute;
     [SerializeField] private Vector4 insetValue;
     [SerializeField] private ShadowManager shadowManager;
     
@@ -39,6 +41,7 @@ public class Froxels : MonoBehaviour
     public bool toggleSingleAll = false;
     public Vector3Int singleFroxel;
     public bool orientFroxels = true;
+    public bool calculateDensity = true;
     public bool enableScatteringCompute = true;
     public bool enableGenerateFroxelsEveryFrame = true;
     public bool enableCalculateShadows = true;
@@ -56,6 +59,9 @@ public class Froxels : MonoBehaviour
     private DebugSlice _debugSlice;
     private Vector3 froxelLastPositionOrigin;
     private Matrix4x4 lastFrameWorldToLocal;
+    
+    private Vector4[] points4;
+    
     public struct Froxel
     {
         //public Frustum frustum;
@@ -85,6 +91,15 @@ public class Froxels : MonoBehaviour
        // _debugSlice.texture3DToSlice = scatteringOutput;
         //GenerateFroxels();
         GenerateFroxelsInWorldSpace();
+    }
+    
+    public void SetUp(int froxelCount)
+    {
+        points4 = new Vector4[froxelCount];
+        for (var i = 0; i < points4.Length; i++)
+        {
+            points4[i] = new Vector4(0,0,0,1);
+        }
     }
     
     void Update()
@@ -124,13 +139,20 @@ public class Froxels : MonoBehaviour
             }
         }
 
+        TransferPoint4(_froxels);
+        
+        if (calculateDensity)
+        {
+            CalculateDensity();
+        }
+        
         if (enableCalculateShadows)
         {
             CalculateShadows();
         }
         else
         {
-            scatteringInputWithShadows = scatteringInput;
+            densityBufferTexture = scatteringInput;
         }
 
         if (enableScatteringCompute)
@@ -189,7 +211,7 @@ public class Froxels : MonoBehaviour
         _froxels = new Froxel[amount.x*amount.y*amount.z];
         ff = new FroxelFlat[_froxels.Length];
         cb = new ComputeBuffer(ff.Length,sizeof(float)*3/*+sizeof(float)*3*8*/);
-        shadowManager.SetUp(_froxels.Length);
+        SetUp(_froxels.Length);
         
         Vector3[] fC = new Vector3[4];
         Vector3[] nC = new Vector3[4];
@@ -400,6 +422,8 @@ public class Froxels : MonoBehaviour
     {
         //var stopwatch = new Stopwatch();
         //stopwatch.Start();
+
+        
         for (var i = 0; i < _froxels.Length; i++)
         {
             //GetFlat(ref _froxels[i], ref ff[i]);
@@ -442,6 +466,18 @@ public class Froxels : MonoBehaviour
         }
         //stopwatch.Stop();
         //Debug.Log("out2: "+stopwatch.ElapsedMilliseconds);
+
+        if (enableDebugDraw)
+        {
+            int debugFroxel = singleFroxel.z * (amount.x * amount.y) + singleFroxel.y * amount.x + singleFroxel.x;
+            for (int index = 0; index < _froxels[debugFroxel].corners.Length; index++)
+            {
+                //froxel.corners[index] = lastFrameWorldToLocal.MultiplyPoint(froxel.corners[index]);
+                //froxel.corners[index] = _camera.transform.localToWorldMatrix.MultiplyPoint(froxel.corners[index]) ;
+                _froxels[debugFroxel].corners[index] = comb.MultiplyPoint3x4(_froxels[debugFroxel].corners[index]);
+            }
+        }
+        
         lastFrameWorldToLocal = _camera.transform.worldToLocalMatrix;
     }
     
@@ -535,16 +571,21 @@ public class Froxels : MonoBehaviour
 
     void RunScatteringCompute()
     {
-        Vector4 size = new Vector4(scatteringInputWithShadows.width, scatteringInputWithShadows.height,
-            scatteringInputWithShadows.volumeDepth, 0);
+        Vector4 size = new Vector4(densityBufferTexture.width, densityBufferTexture.height,
+            densityBufferTexture.volumeDepth, 0);
         
         AdjustRenderTexture(scatteringOutput);
         
-        scatteringCompute.SetTexture(0, "Input",scatteringInputWithShadows);
+        scatteringCompute.SetTexture(0, "DensityBuffer",densityBufferTexture);
+        scatteringCompute.SetTexture(0, "LightBuffer",lightBufferTexture);
         scatteringCompute.SetTexture(0, "Result",scatteringOutput);
         scatteringCompute.SetTexture(0,"CamDepth",camDepthTexture);
         scatteringCompute.SetVector("insetValue",insetValue);
         scatteringCompute.SetVector("size", size);
+        float f = _camera.farClipPlane;
+        float n = _camera.nearClipPlane;
+        Vector4 zBufferParam = new Vector4((f-n)/n, 1, (f-n)/n*f, 1 / f);
+        scatteringCompute.SetVector("_ZBufferParams",zBufferParam);
         ComputeBuffer cb2 = new ComputeBuffer(depths.Length,sizeof(float));
         cb2.SetData(depths);
         scatteringCompute.SetBuffer(0,"depths",cb2);
@@ -555,19 +596,32 @@ public class Froxels : MonoBehaviour
         cb2.Dispose();
     }
 
+    private void CalculateDensity()
+    {
+        AdjustRenderTexture(densityBufferTexture);
+        densityCompute.SetTexture(0, "densityBufferTexture", densityBufferTexture);
+        densityCompute.SetVector("Input_TexelSize",new Vector4(densityBufferTexture.width,densityBufferTexture.height,densityBufferTexture.volumeDepth,0));
+        ComputeBuffer cb3 = new ComputeBuffer(points4.Length,sizeof(float)*4);
+        cb3.SetData(points4);
+        densityCompute.SetBuffer(0,"points",cb3);
+        densityCompute.Dispatch(0,densityBufferTexture.height/8,densityBufferTexture.width/8,densityBufferTexture.volumeDepth/16);
+        
+        cb3.Dispose();
+    }
+    
     private void CalculateShadows()
     {
         //var watch = System.Diagnostics.Stopwatch.StartNew();
 
         //TODO prepare rendertextures
-        AdjustRenderTexture(scatteringInputWithShadows);
-        AdjustRenderTexture(scatteringInput);
+        AdjustRenderTexture(lightBufferTexture);
+        //AdjustRenderTexture(scatteringInput);
         //watch.Stop();
         //var elapsedMs = watch.ElapsedMilliseconds;
         //Debug.Log(elapsedMs);
         
         
-        shadowManager.CalculateShadows(scatteringInput, scatteringInputWithShadows, _froxels, enableTransformedChilds);
+        shadowManager.CalculateShadows(lightBufferTexture, points4, enableTransformedChilds);
     }
 
     
@@ -602,6 +656,25 @@ public class Froxels : MonoBehaviour
         r.Create();
     }
 
+    private void TransferPoint4(Froxels.Froxel[] froxel)
+    {
+        for (var i = 0; i < froxel.Length; i++)
+        {
+            if (enableTransformedChilds)
+            {
+                froxel[i].goT.position.ToVector4(ref points4[i]);
+            }
+            else
+            {
+                //froxel[i].center.ToVector4(ref points4[i]);
+                points4[i].x = froxel[i].center.x;
+                points4[i].y = froxel[i].center.y;
+                points4[i].z = froxel[i].center.z;
+                points4[i].w = 1;
+            }
+        }
+    }
+    
 //    public static void GetFlat(ref Froxel f, ref FroxelFlat ff)
 //    {
 //        //FroxelFlat ff = new FroxelFlat

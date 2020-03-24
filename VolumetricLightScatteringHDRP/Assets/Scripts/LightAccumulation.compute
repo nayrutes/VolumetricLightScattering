@@ -3,8 +3,7 @@
 
 // Create a RenderTexture with enableRandomWrite flag and set it
 // with cs.SetTexture
-RWTexture3D<float4> Input;
-RWTexture3D<float4> Result;
+RWTexture3D<float4> lightBufferTexture;
 Texture2D<float4> LightDepth;
 SamplerState samplerLightDepth;
 float4x4 vp;
@@ -59,7 +58,7 @@ void CSMain (uint3 id : SV_DispatchThreadID)
 //    Result[id.xy] = float4(id.x & id.y, (id.x & 15)/15.0, (id.y & 15)/15.0, 0.0);
     
     //RemoveLater?
-    Input[id] = float4(0,0.1,0.1,0.1);
+    //Input[id] = float4(0,0.1,0.1,0.1);
     //uint index = flat(id);
     //float4 p = points[index];
     
@@ -75,14 +74,14 @@ void CSMain (uint3 id : SV_DispatchThreadID)
     if(inside){
         if(1-depth < pointProjected.z)
         {
-            Result[id] = float4(0,0,0,0);
+            lightBufferTexture[id] = float4(0,0,0,0);
         }else{
-            Result[id] = Input[id];
+            lightBufferTexture[id] = float4(0.5,0.5,0.5,1);//set light color and intensity
         }
     }else
     {
         //No Fog visible if o Light
-        Result[id] = float4(0,0,0,0);
+        lightBufferTexture[id] = float4(0,0,0,0);
         //Result[id] = Input[id];
     }
     //Result[id] = float4(depth,depth,depth,1);

@@ -58,11 +58,7 @@
         //color.rgb = 1 - color.rgb;
         float3 positionInVolume = float3(posInput.positionNDC.x,posInput.positionNDC.y,1);
         float4 scatteringInformation = tex3D(VolumetricFogSampler, positionInVolume);
-        float3 inScattering = scatteringInformation.rgb;
-        float transmittance = scatteringInformation.a;
         
-        //(1) transmittance always 0 ?
-        float3 finalPixelColor = color.rgb * transmittance.xxx + inScattering;
         
         // Fade value allow you to increase the strength of the effect while the camera gets closer to the custom pass volume
         float f = 1 - abs(_FadeValue * 2 - 1);
@@ -72,7 +68,21 @@
         float depthLinear = Linear01Depth(depth, _ZBufferParams);
         
         //Maybe Ignore depth if transmittance (1) is correctly calculated?
+#if 0
+        float3 inScattering = scatteringInformation.rgb;
+        float transmittance = scatteringInformation.a;
+        
+        //(1) transmittance always 0 ?
+        float3 finalPixelColor = color.rgb * transmittance.xxx + inScattering;
         return float4(finalPixelColor.rgb, 1-transmittance);
+#else
+        float3 inScattering = scatteringInformation.rgb;
+        float opticalDepth = scatteringInformation.a;
+        float transmittance = 1- exp(-opticalDepth);
+        //float3 finalPixelColor = transmittance * color.rgb +(1-transmittance)*inScattering;
+        //return float4(inScattering, (inScattering.r+inScattering.g+inScattering.b)/3);
+        return float4(inScattering, transmittance);
+#endif
         //return float4(color.rgb, color.a);
     }
 

@@ -5,6 +5,7 @@
         size ("Size", float) = 0.5
         debugImageSize ("Debug Image Size", Vector) = (256,256,0,0)
         debugTexture("Debug Texture",2D)="white"{}
+        alphaToWhite("alphaToWhite", float) = 0
     }
 
     HLSLINCLUDE
@@ -101,6 +102,7 @@
     sampler2D debugTexture;
     float size;
     float2 debugImageSize;
+    float alphaToWhite;
 
     float4 FullScreenPass(Varyings varyings) : SV_Target
     {
@@ -122,7 +124,12 @@
         {
             float2 debugImageCoordiantes = posInput.positionNDC * debugImageSize;
             float2 displaySizeCoordinates = posInput.positionNDC / size;
-            color = float4(tex2D(debugTexture, displaySizeCoordinates).rgb,1);
+            if(alphaToWhite <1){
+                color = float4(tex2D(debugTexture, displaySizeCoordinates).rgb,1);
+            }else{
+                float alpha = tex2D(debugTexture, displaySizeCoordinates).a;
+                color = float4(alpha,alpha,alpha,1);
+            }
             //color.xyz = 1-color.xyz;
         }
 
