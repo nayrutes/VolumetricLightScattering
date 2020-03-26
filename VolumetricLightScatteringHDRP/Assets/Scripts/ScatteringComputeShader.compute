@@ -113,7 +113,13 @@ void CSMain (uint3 id : SV_DispatchThreadID)
     float sliceDepthNear = depths[0];
     float3 totalRadiance = 0;
     float  opticalDepth  = 0;
-    
+   /* 
+    float xn = ((float)id.x)/((float)size.x);
+    float yn = ((float)id.y)/((float)size.y);
+    float depthCam = CamDepth.SampleLevel(samplerCamDepth,float2(xn,yn),0).r;
+    float depthCamLin = Linear01Depth(depthCam, _ZBufferParams);
+    bool sliceDeeperThanDepthTextue = false;
+    */
     for(uint z = 1; z < VOLUME_DEPTH;z++)
     {
         float sliceDepthFar = depths[z];
@@ -134,7 +140,15 @@ void CSMain (uint3 id : SV_DispatchThreadID)
         totalRadiance += transmittance * scattering * (phase * blendValue.rgb + probeRadiance);
         opticalDepth += 0.5 * blendValue.a;
         //Result[voxelCoordBuffer] = float4(totalRadiance, opticalDepth);
-        Result[voxelCoordBuffer] = float4(totalRadiance, opticalDepth);
+        
+        /*sliceDeeperThanDepthTextue = sliceDepthNear > depthCamLin;
+        if(sliceDeeperThanDepthTextue)
+        {
+            Result[voxelCoordBuffer] = float4(0,0,0,0);
+        }else*/
+        {
+            Result[voxelCoordBuffer] = float4(totalRadiance, opticalDepth);
+        }
         opticalDepth += 0.5 * blendValue.a;
         sliceDepthNear = sliceDepthFar;
     }

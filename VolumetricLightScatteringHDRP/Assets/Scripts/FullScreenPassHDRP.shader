@@ -54,9 +54,9 @@
             color = float4(CustomPassSampleCameraColor(posInput.positionNDC.xy, 0), 1);
 
         // Add your custom pass code here
-        
+        float depthLinear = Linear01Depth(depth, _ZBufferParams);
         //color.rgb = 1 - color.rgb;
-        float3 positionInVolume = float3(posInput.positionNDC.x,posInput.positionNDC.y,1);
+        float3 positionInVolume = float3(posInput.positionNDC.x,posInput.positionNDC.y,depthLinear);
         float4 scatteringInformation = tex3D(VolumetricFogSampler, positionInVolume);
         
         
@@ -65,7 +65,7 @@
         //return float4(color.rgb, color.a);
         
         //float depthLinear = LinearEyeDepth(depth, _ZBufferParams);// * length(varyings.viewVector);
-        float depthLinear = Linear01Depth(depth, _ZBufferParams);
+        
         
         //Maybe Ignore depth if transmittance (1) is correctly calculated?
 #if 0
