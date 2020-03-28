@@ -6,6 +6,7 @@ using System.Linq;
 using System.Reflection;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.Experimental.Rendering;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.HighDefinition;
 using UnityEngine.Serialization;
@@ -47,13 +48,38 @@ public class Froxels : MonoBehaviour
     public bool enableCalculateShadows = true;
     public bool enableTransformedChilds = true;
     
+    //https://bitbucket.org/Unity-Technologies/cinematic-image-effects/src/96901525f6864a62aeadec288cc7749fef4c70a9/UnityProject/Assets/Standard%20Assets/Effects/CinematicEffects(BETA)/TonemappingColorGrading/TonemappingColorGrading.cs
     [SerializeField] private AnimationCurve depthDistribution;
-    
+    [SerializeField] private RenderTexture CurveOutput;
+    private Texture2D m_CurveTexture;
+    private Texture2D curveTexture
+    {
+        get
+        {
+            if (m_CurveTexture == null)
+            {
+                m_CurveTexture = new Texture2D(256, 1, TextureFormat.ARGB32, false, true)
+                {
+                    name = "Curve texture",
+                    wrapMode = TextureWrapMode.Clamp,
+                    filterMode = FilterMode.Bilinear,
+                    anisoLevel = 0,
+                    hideFlags = HideFlags.DontSave
+                };
+            }
+
+            return m_CurveTexture;
+        }
+    }
+
+    private Vector3[] pointsCamRelative;
     private Camera _camera;
+    private Froxel[] _froxelsCamRelative;
     private Froxel[] _froxels;
     private float[] depths;
     private FroxelFlat[] ff;
-    ComputeBuffer cb;
+    private ComputeBuffer cbOrientOutput;
+    ComputeBuffer cbOrientInput;
     private List<GameObject> pointsGos = new List<GameObject>();
     
     private DebugSlice _debugSlice;
@@ -90,16 +116,39 @@ public class Froxels : MonoBehaviour
         _debugSlice = FindObjectOfType<DebugSlice>();
        // _debugSlice.texture3DToSlice = scatteringOutput;
         //GenerateFroxels();
-        GenerateFroxelsInWorldSpace();
+        GenerateFroxelsInCameraSpace();
     }
     
-    public void SetUp(int froxelCount)
+    public void SetUpShadow(int froxelCount)
     {
         points4 = new Vector4[froxelCount];
         for (var i = 0; i < points4.Length; i++)
         {
             points4[i] = new Vector4(0,0,0,1);
         }
+    }
+
+    public void SetUpOrient()
+    {
+        ff = new FroxelFlat[_froxels.Length];
+        cbOrientInput = new ComputeBuffer(ff.Length,sizeof(float)*3/*+sizeof(float)*3*8*/);
+        
+        cbOrientOutput = new ComputeBuffer(ff.Length,sizeof(float)*3);
+        for (var i = 0; i < _froxels.Length; i++)
+        {
+            ff[i].center = _froxelsCamRelative[i].center;
+//            ff[i].corner0 = _froxels[i].corners[0];
+//            ff[i].corner1 = _froxels[i].corners[1];
+//            ff[i].corner2 = _froxels[i].corners[2];
+//            ff[i].corner3 = _froxels[i].corners[3];
+//            ff[i].corner4 = _froxels[i].corners[4];
+//            ff[i].corner5 = _froxels[i].corners[5];
+//            ff[i].corner6 = _froxels[i].corners[6];
+//            ff[i].corner7 = _froxels[i].corners[7];
+        }
+        cbOrientInput.SetData(ff);
+        orientCompute.SetBuffer(0,"froxelsInput",cbOrientInput);
+        orientCompute.SetBuffer(0,"froxelsOutput",cbOrientOutput);
     }
     
     void Update()
@@ -113,14 +162,14 @@ public class Froxels : MonoBehaviour
                 Destroy(g);
             }
             //GenerateFroxels();
-            GenerateFroxelsInWorldSpace();
+            GenerateFroxelsInCameraSpace();
         }
         else
         {
             if (orientFroxels && !enableTransformedChilds)
             {
                 //not necessary with transform in child
-                OrientFroxelsComputeShader();
+                OrientFroxelsFromCameraToWorldComputeShader();
             }
         }
         
@@ -137,6 +186,8 @@ public class Froxels : MonoBehaviour
             {
                 DrawFrustum(_froxels[singleFroxel.z * (amount.x * amount.y) + singleFroxel.y * amount.x + singleFroxel.x]);
             }
+
+            DrawDepth();
         }
 
         TransferPoint4(_froxels);
@@ -196,7 +247,7 @@ public class Froxels : MonoBehaviour
 //        }
     }
 
-    private void GenerateFroxelsInWorldSpace()
+    private void GenerateFroxelsInCameraSpace()
     {
         depths = new float[amount.z+1];
         for (int z = 0; z <= amount.z; z++)
@@ -209,16 +260,17 @@ public class Froxels : MonoBehaviour
         
         lastFrameWorldToLocal = _camera.transform.worldToLocalMatrix;
         _froxels = new Froxel[amount.x*amount.y*amount.z];
-        ff = new FroxelFlat[_froxels.Length];
-        cb = new ComputeBuffer(ff.Length,sizeof(float)*3/*+sizeof(float)*3*8*/);
-        SetUp(_froxels.Length);
+        _froxelsCamRelative = new Froxel[amount.x*amount.y*amount.z];
+        
+        GenCurveTexture(depthDistribution);
+        SetUpShadow(_froxels.Length);
         
         Vector3[] fC = new Vector3[4];
         Vector3[] nC = new Vector3[4];
         _camera.CalculateFrustumCorners(new Rect(0, 0, 1, 1), _camera.farClipPlane, Camera.MonoOrStereoscopicEye.Mono, fC);
         _camera.CalculateFrustumCorners(new Rect(0, 0, 1, 1), _camera.nearClipPlane, Camera.MonoOrStereoscopicEye.Mono, nC);
         //Debug.Log(String.Join("",fC.ToList().ConvertAll(i => i.ToString()).ToArray()));
-        Vector3[] points = new Vector3[(amount.x+1)*(amount.y+1)*(amount.z+1)];
+        pointsCamRelative = new Vector3[(amount.x+1)*(amount.y+1)*(amount.z+1)];
         for (int x = 0; x <= amount.x; x++)
         {
             float xl = Mathf.InverseLerp(0, amount.x, x);
@@ -230,9 +282,9 @@ public class Froxels : MonoBehaviour
                 {
                     float zl = depths[z];
                     Vector3 point = InterP(new Vector3(xl, yl, zl), nC, fC);
-
-                    point = _camera.transform.localToWorldMatrix.MultiplyPoint3x4(point);
-                    points[z * ((amount.x+1) * (amount.y+1)) + y * (amount.x+1) + x] = point;
+                    
+                    //point = _camera.transform.localToWorldMatrix.MultiplyPoint3x4(point);
+                    pointsCamRelative[z * ((amount.x+1) * (amount.y+1)) + y * (amount.x+1) + x] = point;
                 }
             }
         }
@@ -251,26 +303,28 @@ public class Froxels : MonoBehaviour
                     //lbf, rbf, ltf, rtf, lbn, rbn, ltn, rtn,
                     Vector3[] corners = new Vector3[]
                     {
-                        points[(z+1) * ((amount.x+1) * (amount.y+1)) + y * (amount.x+1) + x],
-                        points[(z+1) * ((amount.x+1) * (amount.y+1)) + y * (amount.x+1) + (x+1)],
-                        points[(z+1) * ((amount.x+1) * (amount.y+1)) + (y+1) * (amount.x+1) + x],
-                        points[(z+1) * ((amount.x+1) * (amount.y+1)) + (y+1) * (amount.x+1) + (x+1)],
-                        points[z * ((amount.x+1) * (amount.y+1)) + y * (amount.x+1) + x],
-                        points[z * ((amount.x+1) * (amount.y+1)) + y * (amount.x+1) + (x+1)],
-                        points[z * ((amount.x+1) * (amount.y+1)) + (y+1) * (amount.x+1) + x],
-                        points[z * ((amount.x+1) * (amount.y+1)) + (y+1) * (amount.x+1) + (x+1)]
+                        pointsCamRelative[(z+1) * ((amount.x+1) * (amount.y+1)) + y * (amount.x+1) + x],
+                        pointsCamRelative[(z+1) * ((amount.x+1) * (amount.y+1)) + y * (amount.x+1) + (x+1)],
+                        pointsCamRelative[(z+1) * ((amount.x+1) * (amount.y+1)) + (y+1) * (amount.x+1) + x],
+                        pointsCamRelative[(z+1) * ((amount.x+1) * (amount.y+1)) + (y+1) * (amount.x+1) + (x+1)],
+                        pointsCamRelative[z * ((amount.x+1) * (amount.y+1)) + y * (amount.x+1) + x],
+                        pointsCamRelative[z * ((amount.x+1) * (amount.y+1)) + y * (amount.x+1) + (x+1)],
+                        pointsCamRelative[z * ((amount.x+1) * (amount.y+1)) + (y+1) * (amount.x+1) + x],
+                        pointsCamRelative[z * ((amount.x+1) * (amount.y+1)) + (y+1) * (amount.x+1) + (x+1)]
                     };
                     //Frustum f = GenerateFrustum(corners);
                     Froxel froxel = new Froxel();
                     froxel.corners = corners;
                     froxel.center = CalculateCenter(froxel);
-                    GameObject go =SpawnPointChild(froxel.center);
-                    froxel.goT = go.transform;
-                    pointsGos.Add(go);
-                    _froxels[z * ((amount.x) * (amount.y)) + y * (amount.x) + x]= froxel;
+                    //GameObject go =SpawnPointChild(froxel.center);
+                    //froxel.goT = go.transform;
+                    //pointsGos.Add(go);
+                    _froxels[z * ((amount.x) * (amount.y)) + y * (amount.x) + x].corners = new Vector3[8];
+                    _froxelsCamRelative[z * ((amount.x) * (amount.y)) + y * (amount.x) + x]= froxel;
                 }
             }
         }
+        SetUpOrient();
     }
     
     private GameObject SpawnPointChild(Vector3 point)
@@ -399,55 +453,56 @@ public class Froxels : MonoBehaviour
        //        }
        //    }
     
-    void OrientFroxels()
-    {
-        //Matrix4x4 inv = Matrix4x4.Inverse(lastFrameWorldToLocal);
-        Matrix4x4 comb = _camera.transform.localToWorldMatrix * lastFrameWorldToLocal;
-        for (var i = 0; i < _froxels.Length; i++)
-        {
-            for (int index = 0; index < _froxels[i].corners.Length; index++)
-            {
-                //froxel.corners[index] = lastFrameWorldToLocal.MultiplyPoint(froxel.corners[index]);
-                //froxel.corners[index] = _camera.transform.localToWorldMatrix.MultiplyPoint(froxel.corners[index]) ;
-                _froxels[i].corners[index] = comb.MultiplyPoint3x4(_froxels[i].corners[index]);
-            }
+//    void OrientFroxels()
+//    {
+//        //Matrix4x4 inv = Matrix4x4.Inverse(lastFrameWorldToLocal);
+//        Matrix4x4 comb = _camera.transform.localToWorldMatrix * lastFrameWorldToLocal;
+//        for (var i = 0; i < _froxels.Length; i++)
+//        {
+//            for (int index = 0; index < _froxels[i].corners.Length; index++)
+//            {
+//                //froxel.corners[index] = lastFrameWorldToLocal.MultiplyPoint(froxel.corners[index]);
+//                //froxel.corners[index] = _camera.transform.localToWorldMatrix.MultiplyPoint(froxel.corners[index]) ;
+//                _froxels[i].corners[index] = comb.MultiplyPoint3x4(_froxels[i].corners[index]);
+//            }
+//
+//            _froxels[i].center = comb.MultiplyPoint3x4(_froxels[i].center);
+//        }
+//
+//        lastFrameWorldToLocal = _camera.transform.worldToLocalMatrix;
+//    }
 
-            _froxels[i].center = comb.MultiplyPoint3x4(_froxels[i].center);
-        }
-
-        lastFrameWorldToLocal = _camera.transform.worldToLocalMatrix;
-    }
-
-    void OrientFroxelsComputeShader()
+    void OrientFroxelsFromCameraToWorldComputeShader()
     {
         //var stopwatch = new Stopwatch();
         //stopwatch.Start();
-
         
-        for (var i = 0; i < _froxels.Length; i++)
-        {
-            //GetFlat(ref _froxels[i], ref ff[i]);
-            ff[i].center = _froxels[i].center;
-//            ff[i].corner0 = _froxels[i].corners[0];
-//            ff[i].corner1 = _froxels[i].corners[1];
-//            ff[i].corner2 = _froxels[i].corners[2];
-//            ff[i].corner3 = _froxels[i].corners[3];
-//            ff[i].corner4 = _froxels[i].corners[4];
-//            ff[i].corner5 = _froxels[i].corners[5];
-//            ff[i].corner6 = _froxels[i].corners[6];
-//            ff[i].corner7 = _froxels[i].corners[7];
-        }
-        //Debug.Log("in1: "+stopwatch.ElapsedMilliseconds);
-        cb.SetData(ff);
-        //Debug.Log("in2: "+stopwatch.ElapsedMilliseconds);
         
-        orientCompute.SetBuffer(0,"froxels",cb);
-        Matrix4x4 comb = _camera.transform.localToWorldMatrix * lastFrameWorldToLocal;
+//        for (var i = 0; i < _froxels.Length; i++)
+//        {
+//            //GetFlat(ref _froxels[i], ref ff[i]);
+//            ff[i].center = _froxelsCamRelative[i].center;
+////            ff[i].corner0 = _froxels[i].corners[0];
+////            ff[i].corner1 = _froxels[i].corners[1];
+////            ff[i].corner2 = _froxels[i].corners[2];
+////            ff[i].corner3 = _froxels[i].corners[3];
+////            ff[i].corner4 = _froxels[i].corners[4];
+////            ff[i].corner5 = _froxels[i].corners[5];
+////            ff[i].corner6 = _froxels[i].corners[6];
+////            ff[i].corner7 = _froxels[i].corners[7];
+//        }
+//        //Debug.Log("in1: "+stopwatch.ElapsedMilliseconds);
+//        cbOrientInput.SetData(ff);
+//        //Debug.Log("in2: "+stopwatch.ElapsedMilliseconds);
+//        
+//        orientCompute.SetBuffer(0,"froxelsInput",cbOrientInput);
+//        orientCompute.SetBuffer(0,"froxelsOutput",cbOrientOutput);
+        Matrix4x4 comb = _camera.transform.localToWorldMatrix;// * lastFrameWorldToLocal;
         orientCompute.SetMatrix("comb",comb);
         
         orientCompute.Dispatch(0,ff.Length/1024,1,1);
         
-        cb.GetData(ff);
+        cbOrientOutput.GetData(ff);
         //cb.Dispose();
         //Debug.Log("out1: "+stopwatch.ElapsedMilliseconds);
         for (var i = 0; i < _froxels.Length; i++)
@@ -470,15 +525,15 @@ public class Froxels : MonoBehaviour
         if (enableDebugDraw)
         {
             int debugFroxel = singleFroxel.z * (amount.x * amount.y) + singleFroxel.y * amount.x + singleFroxel.x;
-            for (int index = 0; index < _froxels[debugFroxel].corners.Length; index++)
+            for (int index = 0; index < _froxelsCamRelative[debugFroxel].corners.Length; index++)
             {
                 //froxel.corners[index] = lastFrameWorldToLocal.MultiplyPoint(froxel.corners[index]);
                 //froxel.corners[index] = _camera.transform.localToWorldMatrix.MultiplyPoint(froxel.corners[index]) ;
-                _froxels[debugFroxel].corners[index] = comb.MultiplyPoint3x4(_froxels[debugFroxel].corners[index]);
+                _froxels[debugFroxel].corners[index] = comb.MultiplyPoint3x4(_froxelsCamRelative[debugFroxel].corners[index]);
             }
         }
         
-        lastFrameWorldToLocal = _camera.transform.worldToLocalMatrix;
+        //lastFrameWorldToLocal = _camera.transform.worldToLocalMatrix;
     }
     
 //    void AdjustFroxelsPosition()
@@ -496,6 +551,7 @@ public class Froxels : MonoBehaviour
 
     private void From3DTo2D()
     {
+        from3DTo2D.SetTexture("_CurveTexture",curveTexture);
         //AdjustRenderTexture(scatteringResult2D, false, false);
         Graphics.Blit(null,scatteringResult2D,from3DTo2D);
     }
@@ -675,6 +731,85 @@ public class Froxels : MonoBehaviour
         }
     }
     
+    //https://bitbucket.org/Unity-Technologies/cinematic-image-effects/src/96901525f6864a62aeadec288cc7749fef4c70a9/UnityProject/Assets/Standard%20Assets/Effects/CinematicEffects(BETA)/TonemappingColorGrading/TonemappingColorGrading.cs
+    private void GenCurveTexture(AnimationCurve animationCurve)
+    {
+        //AnimationCurve master = colorGrading.curves.master;
+        //AnimationCurve red = animationCurve;
+        //AnimationCurve green = colorGrading.curves.green;
+        //AnimationCurve blue = colorGrading.curves.blue;
+
+        Color[] pixels = new Color[256];
+
+        AnimationCurve inverseanimationCurve = new AnimationCurve();
+        for (int i = 0; i < animationCurve.length; i++)
+        {
+            Keyframe inverseKey = new Keyframe(animationCurve.keys[i].value, animationCurve.keys[i].time);
+            inverseanimationCurve.AddKey(inverseKey);
+        }
+        
+        for (float i = 0f; i <= 1f; i += 1f / 255f)
+        {
+            //float m = Mathf.Clamp(master.Evaluate(i), 0f, 1f);
+            float r = Mathf.Clamp(inverseanimationCurve.Evaluate(i), 0f, 1f);
+            //float g = Mathf.Clamp(green.Evaluate(i), 0f, 1f);
+            //float b = Mathf.Clamp(blue.Evaluate(i), 0f, 1f);
+            pixels[(int)Mathf.Floor(i * 255f)] = new Color(r, 0, 0, 1);
+        }
+    
+        curveTexture.SetPixels(pixels);
+        curveTexture.Apply();
+        Graphics.Blit(curveTexture,CurveOutput);
+    }
+
+    void DrawDepth()
+    {
+        //lbf, rbf, ltf, rtf, lbn, rbn, ltn, rtn,
+//        Vector3[] corners = new Vector3[]
+//        {
+//      lbf      pointsCamRelative[(z+1) * ((amount.x+1) * (amount.y+1)) + y * (amount.x+1) + x],
+//      rbf      pointsCamRelative[(z+1) * ((amount.x+1) * (amount.y+1)) + y * (amount.x+1) + (x+1)],
+//      ltf      pointsCamRelative[(z+1) * ((amount.x+1) * (amount.y+1)) + (y+1) * (amount.x+1) + x],
+//      rtf      pointsCamRelative[(z+1) * ((amount.x+1) * (amount.y+1)) + (y+1) * (amount.x+1) + (x+1)],
+//      lbn      pointsCamRelative[z * ((amount.x+1) * (amount.y+1)) + y * (amount.x+1) + x],
+//      rbn      pointsCamRelative[z * ((amount.x+1) * (amount.y+1)) + y * (amount.x+1) + (x+1)],
+//      ltn      pointsCamRelative[z * ((amount.x+1) * (amount.y+1)) + (y+1) * (amount.x+1) + x],
+//      rtn      pointsCamRelative[z * ((amount.x+1) * (amount.y+1)) + (y+1) * (amount.x+1) + (x+1)]
+//        };
+        
+        for (int z = 0; z < amount.z+1; z++)
+        {
+            //left to right vertical lines
+//            for (int x = 0; x < amount.x+1; x++)
+//            {
+//                Vector3 bottom = pointsCamRelative[z * ((amount.x+1) * (amount.y+1)) + 0 * (amount.x+1) + x];//lbn
+//                Vector3 top = pointsCamRelative[z * ((amount.x+1) * (amount.y+1)) + (amount.y) * (amount.x+1) + x];//ltn
+//                Debug.DrawLine(bottom,top,Color.blue);
+//            }
+//            //bottom to top horizontal lines
+//            for (int y = 0; y < amount.y+1; y++)
+//            {
+//                Vector3 left = pointsCamRelative[z * ((amount.x + 1) * (amount.y + 1)) + y * (amount.x + 1) + 0]; //lbn
+//                Vector3 right = pointsCamRelative[z * ((amount.x+1) * (amount.y+1)) + y * (amount.x+1) + amount.x];//rbn
+//                Debug.DrawLine(left,right,Color.red);
+//            }
+            Matrix4x4 comb = _camera.transform.localToWorldMatrix;            
+
+            Vector3 bottomleft = pointsCamRelative[z * ((amount.x+1) * (amount.y+1)) + 0 * (amount.x+1) + 0];//lbn
+            Vector3 topleft = pointsCamRelative[z * ((amount.x+1) * (amount.y+1)) + (amount.y) * (amount.x+1) + 0];//ltn
+            Vector3 bottomright = pointsCamRelative[z * ((amount.x+1) * (amount.y+1)) + 0 * (amount.x+1) + amount.x];//lbn
+            Vector3 topright = pointsCamRelative[z * ((amount.x+1) * (amount.y+1)) + (amount.y) * (amount.x+1) + (amount.x)];//ltn
+            bottomleft = comb.MultiplyPoint3x4(bottomleft);
+            topleft = comb.MultiplyPoint3x4(topleft);
+            bottomright = comb.MultiplyPoint3x4(bottomright);
+            topright = comb.MultiplyPoint3x4(topright);
+            Debug.DrawLine(bottomleft,topleft,Color.cyan);
+            Debug.DrawLine(topright,bottomright,Color.cyan);
+            Debug.DrawLine(bottomleft,bottomright,Color.cyan);
+            Debug.DrawLine(topright,topleft,Color.cyan);
+        }
+        
+    }
 //    public static void GetFlat(ref Froxel f, ref FroxelFlat ff)
 //    {
 //        //FroxelFlat ff = new FroxelFlat

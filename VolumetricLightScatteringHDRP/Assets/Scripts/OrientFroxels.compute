@@ -25,7 +25,8 @@ struct FroxelFlat
 };
 
 RWTexture2D<float4> Result;
-RWStructuredBuffer<FroxelFlat> froxels;
+RWStructuredBuffer<FroxelFlat> froxelsInput;
+RWStructuredBuffer<FroxelFlat> froxelsOutput;
 float4x4 comb;
 
 [numthreads(1024,1,1)]
@@ -46,6 +47,6 @@ void CSMain (uint3 id : SV_DispatchThreadID)
     //froxels[id.x].corner7 = float3(mul(comb,float4(froxels[id.x].corner7,1)).xyz);
 
 
-    froxels[id.x].center =float3(mul(comb,float4(froxels[id.x].center,1)).xyz);//comb.MultiplyPoint3x4(froxels[id.x].center);
+    froxelsOutput[id.x].center =float3(mul(comb,float4(froxelsInput[id.x].center,1)).xyz);//comb.MultiplyPoint3x4(froxels[id.x].center);
         
 }
