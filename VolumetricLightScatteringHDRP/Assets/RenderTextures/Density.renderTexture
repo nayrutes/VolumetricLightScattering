@@ -34,4 +34,4 @@ RenderTexture:
     m_WrapV: 1
     m_WrapW: 1
   m_Dimension: 3
-  m_VolumeDepth: 32
+  m_VolumeDepth: 64

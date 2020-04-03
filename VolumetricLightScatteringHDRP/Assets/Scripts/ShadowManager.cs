@@ -28,7 +28,7 @@ public class ShadowManager : MonoBehaviour
 
     
     
-    public void CalculateShadows(RenderTexture lightBufferTexture,Vector4[] points4 , bool enableTransformedChilds)
+    public void CalculateShadows(RenderTexture lightBufferTexture,Vector4[] points4 , bool enableTransformedChilds, int debugIndex)
     {
         Matrix4x4 scaleMatrix = Matrix4x4.identity;
         scaleMatrix.m22 = -1.0f;
@@ -43,7 +43,7 @@ public class ShadowManager : MonoBehaviour
         lightAccumulation.SetMatrix("vp",vp);
         lightAccumulation.SetMatrix("convertTo01",CreateConvertionMatrixMinus11To01());
         lightAccumulation.SetVector("Input_TexelSize",new Vector4(lightBufferTexture.width,lightBufferTexture.height,lightBufferTexture.volumeDepth,0));
-        
+        lightAccumulation.SetVector("lightWS",lightCamera.cam.transform.position);
         
         //var watch = System.Diagnostics.Stopwatch.StartNew();
         //
@@ -68,6 +68,16 @@ public class ShadowManager : MonoBehaviour
         Vector3 projectedDebugWorld = ProjectionTest.ToWorld(projectedDebugLocal, lightCamera.cam.transform);
         Froxels.DrawPointCross(projectedDebugWorld,0.3f,isInside ? Color.white : Color.red);
         Froxels.DrawPointCross(DebugPoint,0.3f,Color.blue);
+
+        Vector3 lightWS = lightCamera.cam.transform.position;
+        Froxels.DrawPointCross(lightWS,1.0f,Color.green);
+        int index = debugIndex;
+        Vector3 pointWS = new Vector3(points4[index].x,points4[index].y,points4[index].z);
+        Froxels.DrawPointCross(pointWS,1.0f,Color.red);
+        Vector3 pointToLightRay = lightWS-pointWS;
+        float pointToLightDistance = Vector3.Distance(lightWS,pointWS);
+        float weight =  Mathf.Exp(-(pointToLightDistance));
+        Debug.DrawLine(lightWS,pointWS,Color.green);
     }
     
     //shifts a point from [-1, 1] unit cube into [0, 1] unit cube 

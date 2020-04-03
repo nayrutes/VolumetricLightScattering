@@ -58,7 +58,8 @@
         float depthLinear = Linear01Depth(depth, _ZBufferParams);
         float curveSample = tex2D(_CurveTexture, float2(depthLinear, 0.5)).r;
         //color.rgb = 1 - color.rgb;
-        float3 positionInVolume = float3(posInput.positionNDC.x,posInput.positionNDC.y,curveSample);
+        //float3 positionInVolume = float3(posInput.positionNDC.x,posInput.positionNDC.y,curveSample);
+        float3 positionInVolume = float3(posInput.positionNDC.x,posInput.positionNDC.y,depthLinear);
         float4 scatteringInformation = tex3D(VolumetricFogSampler, positionInVolume);
         
         
@@ -80,11 +81,11 @@
 #else
         float3 inScattering = scatteringInformation.rgb;
         float opticalDepth = scatteringInformation.a;
-        float transmittance = 1- exp(-opticalDepth);
+        float opacity = 1- exp(-opticalDepth);
         //float3 finalPixelColor = transmittance * color.rgb +(1-transmittance)*inScattering;
         //return float4(inScattering, (inScattering.r+inScattering.g+inScattering.b)/3);
         
-        return float4(inScattering, transmittance);
+        return float4(inScattering, opacity);
         //return float4(curveSample.xxx,1);
 #endif
         //return float4(color.rgb, color.a);

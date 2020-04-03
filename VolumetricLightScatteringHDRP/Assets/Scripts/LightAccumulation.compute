@@ -1,11 +1,16 @@
 ﻿// Each #kernel tells which function to compile; you can have many kernels
 #pragma kernel CSMain
 
+#define M_PI 3.1415926535897932384626433832795
+
 // Create a RenderTexture with enableRandomWrite flag and set it
 // with cs.SetTexture
 RWTexture3D<float4> lightBufferTexture;
+
 Texture2D<float4> LightDepth;
 SamplerState samplerLightDepth;
+float4 lightWS;
+
 float4x4 vp;
 float4x4 convertTo01;
 StructuredBuffer<float4> points;
@@ -62,7 +67,11 @@ void CSMain (uint3 id : SV_DispatchThreadID)
     //uint index = flat(id);
     //float4 p = points[index];
     
-    float4 pointProjected = mul(vp, points[flat(id)]);
+    lightBufferTexture[id] = float4(0.1,0.1,0.1,0.05);//Ambient light
+    lightBufferTexture[id] = float4(0,0,0,0);
+    //for each light
+    float4 pointWS = points[flat(id)];
+    float4 pointProjected = mul(vp, pointWS);
     pointProjected = pointProjected/pointProjected.w;
     bool inside = (pointProjected.z <= 1 && pointProjected.z >= -1 && pointProjected.x <= 1 && pointProjected.x >= -1 &&
                          pointProjected.y <= 1 && pointProjected.y >= -1);
@@ -70,19 +79,37 @@ void CSMain (uint3 id : SV_DispatchThreadID)
     pointProjected = mul(convertTo01,pointProjected);
     float depth = LightDepth.SampleLevel(samplerLightDepth,pointProjected.xy,0).r;
     //float depth = tex2D(samplerLightDepth, pointProjected.xy).r;
+    float3 pointToLightRay = lightWS-pointWS;
+    float pointToLightDistance = distance(pointWS.xyz,lightWS.xyz);
+    float phase = 1/(4*M_PI);
     
     if(inside){
         if(1-depth < pointProjected.z)
         {
-            lightBufferTexture[id] = float4(0,0,0,0);
+            
         }else{
-            lightBufferTexture[id] = float4(0.5,0.5,0.5,1);//set light color and intensity
+            float4 old = lightBufferTexture[id];
+            float3 color = old.rgb;
+            float intensity =20;
+            float3 newColor =float3(0,0.5,0.5);
+            
+            pointToLightDistance = sqrt(pointToLightDistance);
+            
+            //transmittance from optical depth
+            float weight =  exp(-(pointToLightDistance));
+            //weight = 1;
+            intensity *= weight;
+            //color += intensity*(newColor.rgb);
+            //color = color/(intensity+old);
+            //intensity = (intensity +old.a);
+            color = saturate(intensity * newColor * phase);
+            intensity = clamp(intensity,0,1);
+            lightBufferTexture[id] = float4(color.rgb, intensity);//set light color and intensity
+            //lightBufferTexture[id]  = float4(0.5,0.5,0.5,1);
         }
     }else
     {
-        //No Fog visible if o Light
-        lightBufferTexture[id] = float4(0,0,0,0);
-        //Result[id] = Input[id];
+        //lightBufferTexture[id] = float4(0,0,0,0);
     }
     //Result[id] = float4(depth,depth,depth,1);
     //Result[id] = LightDepth.SampleLevel(samplerLightDepth,pointProjected.xy,0).a;

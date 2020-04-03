@@ -677,7 +677,7 @@ public class Froxels : MonoBehaviour
         //Debug.Log(elapsedMs);
         
         
-        shadowManager.CalculateShadows(lightBufferTexture, points4, enableTransformedChilds);
+        shadowManager.CalculateShadows(lightBufferTexture, points4, enableTransformedChilds,singleFroxel.z * (amount.x * amount.y) + singleFroxel.y * amount.x + singleFroxel.x);
     }
 
     

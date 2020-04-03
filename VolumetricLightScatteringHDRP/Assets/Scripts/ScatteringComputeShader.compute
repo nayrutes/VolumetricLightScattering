@@ -25,9 +25,9 @@ float4 AccumulateScattering(float4 colorAndDensityFront, float4 colorAndDensityB
     float3 colorFront = colorAndDensityFront.rgb;
     float3 colorBack = colorAndDensityBack.rgb;
     
-    float factorColorBack = saturate(exp(-densityFront));
+    float factorColorBack = max(0, min(1, exp(-densityFront)));//saturate
     float3 light = colorFront + factorColorBack*colorBack;
-    return float4(light.rgb, (densityFront + densityBack)*(1-depth));
+    return float4(light.rgb, (densityFront + densityBack));//*(1-depth));
     
     //float3 light = colorAndDensityFront.rgb + saturate(exp(-colorAndDensityFront.a))*colorAndDensityBack.rgb;
     //return float4(light.rgb, colorAndDensityFront.a + colorAndDensityBack.a);
@@ -58,9 +58,10 @@ float3 EvaluateLight(float extinction, float intervalLength, float3 voxelCoordBu
     float4 lightColor = LOAD_TEXTURE3D(LightBuffer, voxelCoordBuffer);
     //float4 lightColor = float4(0.5,0.5,0.5,1);
     //transmittance from optical depth
-    float weight = exp(-(extinction * intervalLength));
+    float weight =  exp(-(extinction * intervalLength));
+    //weight=1;
     float ligtIntensity = lightColor.a;
-    return (weight * lightColor.rgb)*ligtIntensity; //is it falloff?
+    return (weight * lightColor.rgb); //is it falloff?
 }
 
 [numthreads(32,32,1)]
@@ -83,18 +84,19 @@ void CSMain (uint3 id : SV_DispatchThreadID)
     }*/
 #if 0
     float depth = 0;
-    float4 currentSliceValue = DensityBuffer[uint3(id.xy,VOLUME_DEPTH)].rgba;
+    float4 currentSliceValue = DensityBuffer[uint3(id.xy,0)].rgba;
+    currentSliceValue = LightBuffer[uint3(id.xy,0)].rgba;
     WriteOutput(uint3(id.xy,0),currentSliceValue, depth);
-    float xn = ((float)id.x)/((float)size.x);
-    float yn = ((float)id.y)/((float)size.y);
-    float depthCam = CamDepth.SampleLevel(samplerCamDepth,float2(xn,yn),0).r;
-    float depthCamLin = Linear01Depth(depthCam, _ZBufferParams);
+    //float xn = ((float)id.x)/((float)size.x);
+    //float yn = ((float)id.y)/((float)size.y);
+    //float depthCam = CamDepth.SampleLevel(samplerCamDepth,float2(xn,yn),0).r;
+    //float depthCamLin = Linear01Depth(depthCam, _ZBufferParams);
     
     
     for(uint z = 1; z < VOLUME_DEPTH;z++)
     {
         //Result[uint3(id.xy,z)].rgba = float4(depthCamLin,0,0,0.5);
-        float depthDelta = depths[z] - depths[z-1];
+        //float depthDelta = depths[z] - depths[z-1];
         uint zTmp = z;
         /*if((1.0-depthCamLin) > depths[z])
         {
@@ -104,7 +106,9 @@ void CSMain (uint3 id : SV_DispatchThreadID)
         }
         else*/
         {
+        float depthDelta = 0;
             float4 nextValue = DensityBuffer[uint3(id.xy, zTmp)].rgba;
+            nextValue = LightBuffer[uint3(id.xy,zTmp)].rgba;
             currentSliceValue = AccumulateScattering(currentSliceValue, nextValue, depthDelta);
             WriteOutput(uint3(id.xy, zTmp), currentSliceValue, depthDelta);
         }           
@@ -122,23 +126,27 @@ void CSMain (uint3 id : SV_DispatchThreadID)
     */
     for(uint z = 1; z < VOLUME_DEPTH;z++)
     {
-        float sliceDepthFar = depths[z];
+        float sliceDepthFar = depths[z]; //TODO insert non-linear here?
         float sliceDepthDelta = sliceDepthFar - sliceDepthNear;
+        float sliceDepthDeltaWorld = sliceDepthDelta*100;//TODO 100 camera range?
+        //float sliceDepthDelta = 0.0078125; // 1/128
+        //sliceDepthDelta = 0.015625;// 1/64
+        //sliceDepthDelta = 0.03125;// 1/32
         //float xn = ((float)id.x)/((float)size.x);
         //float yn = ((float)id.y)/((float)size.y);
         uint3 voxelCoordBuffer = uint3(id.x,id.y, z);
         float4 density = LOAD_TEXTURE3D(DensityBuffer, voxelCoordBuffer);
 
-        float3 scattering = density.rgb;
+        float3 fogColor = density.rgb;
         float  extinction = density.a;
         
         float3 light = EvaluateLight(extinction, sliceDepthDelta, voxelCoordBuffer);
-        float4 blendValue = float4(light,  extinction * sliceDepthDelta);
+        float4 blendValue = float4(light,  extinction * sliceDepthDelta );
         float transmittance = exp(-opticalDepth);
         float phase = 1;
         float3 probeRadiance = float3(0,0,0);
-        totalRadiance += transmittance * scattering * (phase * blendValue.rgb + probeRadiance);
-        opticalDepth += 0.5 * blendValue.a;
+        totalRadiance += (transmittance * fogColor * (phase * blendValue.rgb + probeRadiance))*sliceDepthDeltaWorld;
+        //opticalDepth += 0.5 * blendValue.a;
         //Result[voxelCoordBuffer] = float4(totalRadiance, opticalDepth);
         
         /*sliceDeeperThanDepthTextue = sliceDepthNear > depthCamLin;
@@ -149,7 +157,8 @@ void CSMain (uint3 id : SV_DispatchThreadID)
         {
             Result[voxelCoordBuffer] = float4(totalRadiance, opticalDepth);
         }
-        opticalDepth += 0.5 * blendValue.a;
+        opticalDepth +=blendValue.a;
+        //opticalDepth += 0.5 * blendValue.a;
         sliceDepthNear = sliceDepthFar;
     }
  #endif
