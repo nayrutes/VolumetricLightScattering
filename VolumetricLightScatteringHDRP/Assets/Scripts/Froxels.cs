@@ -742,11 +742,21 @@ public class Froxels : MonoBehaviour
         Color[] pixels = new Color[256];
 
         AnimationCurve inverseanimationCurve = new AnimationCurve();
-        for (int i = 0; i < animationCurve.length; i++)
+//        for (int i = 0; i < animationCurve.length; i++)
+//        {
+//            Keyframe inverseKey = new Keyframe(animationCurve.keys[i].value, animationCurve.keys[i].time);
+//            inverseanimationCurve.AddKey(inverseKey);
+//        }
+        int length =amount.z*2;
+        for (int i = 0; i < length; i++)
         {
-            Keyframe inverseKey = new Keyframe(animationCurve.keys[i].value, animationCurve.keys[i].time);
+            float part = i*(1 / (float) length);
+            Keyframe key = new Keyframe(part,animationCurve.Evaluate(part));
+            //Keyframe inverseKey = new Keyframe(animationCurve.keys[i].value, animationCurve.keys[i].time);
+            Keyframe inverseKey = new Keyframe(key.value,key.time);
             inverseanimationCurve.AddKey(inverseKey);
         }
+        
         
         for (float i = 0f; i <= 1f; i += 1f / 255f)
         {
