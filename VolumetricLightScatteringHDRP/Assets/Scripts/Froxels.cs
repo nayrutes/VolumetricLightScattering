@@ -34,11 +34,13 @@ public class Froxels : MonoBehaviour
     [SerializeField] private ShadowManager shadowManager;
     
     [Header("inX, inY, inZ")]
-    [SerializeField] private Vector3Int amount;
+    [SerializeField] public Vector3Int amount;
 
     public bool enableDebugDraw = true;
     public bool drawCorners = true;
     public bool drawEdges = true;
+    public bool drawSingle = false;
+    public bool drawAll = false;
     public bool toggleSingleAll = false;
     public Vector3Int singleFroxel;
     public bool orientFroxels = true;
@@ -72,8 +74,8 @@ public class Froxels : MonoBehaviour
         }
     }
 
-    private Vector3[] pointsCamRelative;
-    private Camera _camera;
+    public Vector3[] pointsCamRelative;
+    public Camera _camera;
     private Froxel[] _froxelsCamRelative;
     private Froxel[] _froxels;
     private float[] depths;
@@ -175,14 +177,14 @@ public class Froxels : MonoBehaviour
         
         if (enableDebugDraw)
         {
-            if (toggleSingleAll)
+            if (drawAll)
             {
                 foreach (Froxel froxel in _froxels)
                 {
                     DrawFrustum(froxel);
                 }
             }
-            else
+            else if (drawSingle)
             {
                 DrawFrustum(_froxels[singleFroxel.z * (amount.x * amount.y) + singleFroxel.y * amount.x + singleFroxel.x]);
             }
@@ -618,10 +620,42 @@ public class Froxels : MonoBehaviour
     
     void DrawOutlineFrustrum()
     {
+//        Vector3[] nearCornersWorld = new Vector3[4];
+//        Vector3[] farCornersWorld = new Vector3[4];
+//        _camera.CalculateFrustumCorners(new Rect(0,0,1,1),_camera.nearClipPlane,Camera.MonoOrStereoscopicEye.Mono, nearCornersWorld);
+//        _camera.CalculateFrustumCorners(new Rect(0,0,1,1),_camera.farClipPlane,Camera.MonoOrStereoscopicEye.Mono, farCornersWorld);
 //        for (int i = 0; i < 4; i++)
 //        {
-//            Debug.DrawLine(nearCornersWorld[i],farCornersWorld[i],Color.cyan);
+//            Vector3 transformed1 = _camera.transform.localToWorldMatrix * nearCornersWorld[i];
+//            Vector3 transformed2 = _camera.transform.localToWorldMatrix * farCornersWorld[i];
+//            Debug.DrawLine(transformed1,transformed2,Color.black);
 //        }
+
+        Matrix4x4 comb = _camera.transform.localToWorldMatrix;            
+
+        Vector3 bottomleftnear = pointsCamRelative[0 * ((amount.x+1) * (amount.y+1)) + 0 * (amount.x+1) + 0];//lbn
+        Vector3 bottomleftfar = pointsCamRelative[amount.z * ((amount.x+1) * (amount.y+1)) + 0 * (amount.x+1) + 0];//lbf
+        Vector3 topleftnear = pointsCamRelative[0 * ((amount.x+1) * (amount.y+1)) + (amount.y) * (amount.x+1) + 0];//ltn
+        Vector3 topleftfar = pointsCamRelative[amount.z * ((amount.x+1) * (amount.y+1)) + (amount.y) * (amount.x+1) + 0];//ltf
+        Vector3 bottomrightnear = pointsCamRelative[0 * ((amount.x+1) * (amount.y+1)) + 0 * (amount.x+1) + amount.x];//lbn
+        Vector3 bottomrightfar = pointsCamRelative[amount.z * ((amount.x+1) * (amount.y+1)) + 0 * (amount.x+1) + amount.x];//lbf
+        Vector3 toprightnear = pointsCamRelative[0 * ((amount.x+1) * (amount.y+1)) + (amount.y) * (amount.x+1) + (amount.x)];//ltn
+        Vector3 toprightfar = pointsCamRelative[amount.z * ((amount.x+1) * (amount.y+1)) + (amount.y) * (amount.x+1) + (amount.x)];//ltf
+        
+        bottomleftnear = comb.MultiplyPoint3x4(bottomleftnear);
+        bottomleftfar = comb.MultiplyPoint3x4(bottomleftfar);
+        topleftnear = comb.MultiplyPoint3x4(topleftnear);
+        topleftfar = comb.MultiplyPoint3x4(topleftfar);
+        bottomrightnear = comb.MultiplyPoint3x4(bottomrightnear);
+        bottomrightfar = comb.MultiplyPoint3x4(bottomrightfar);
+        toprightnear = comb.MultiplyPoint3x4(toprightnear);
+        toprightfar = comb.MultiplyPoint3x4(toprightfar);
+        
+        
+        Debug.DrawLine(bottomleftnear,bottomleftfar,Color.black);
+        Debug.DrawLine(topleftnear,topleftfar,Color.black);
+        Debug.DrawLine(bottomrightnear,bottomrightfar,Color.black);
+        Debug.DrawLine(toprightnear,toprightfar,Color.black);
     }
 
 

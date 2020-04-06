@@ -146,7 +146,7 @@ void CSMain (uint3 id : SV_DispatchThreadID)
         float phase = 1;
         float3 probeRadiance = float3(0,0,0);
         totalRadiance += (transmittance * fogColor * (phase * blendValue.rgb + probeRadiance))*sliceDepthDeltaWorld;
-        //opticalDepth += 0.5 * blendValue.a;
+        opticalDepth += 0.5 * blendValue.a;
         //Result[voxelCoordBuffer] = float4(totalRadiance, opticalDepth);
         
         /*sliceDeeperThanDepthTextue = sliceDepthNear > depthCamLin;
@@ -157,8 +157,8 @@ void CSMain (uint3 id : SV_DispatchThreadID)
         {
             Result[voxelCoordBuffer] = float4(totalRadiance, opticalDepth);
         }
-        opticalDepth +=blendValue.a;
-        //opticalDepth += 0.5 * blendValue.a;
+        //opticalDepth +=blendValue.a;
+        opticalDepth += 0.5 * blendValue.a;
         sliceDepthNear = sliceDepthFar;
     }
  #endif
