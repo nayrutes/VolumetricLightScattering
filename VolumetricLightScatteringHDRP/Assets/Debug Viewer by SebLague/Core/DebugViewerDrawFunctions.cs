@@ -40,5 +40,14 @@ namespace Visualisation {
         public static void DrawArc (Vector3 centre, Vector3 normal, float startAngle, float angle, float radius, Color colour, Style style = Style.Standard) {
             DrawRing (centre, normal, startAngle, angle, 0, radius, colour, style);
         }
+
+        public static void DrawConnectDots(Vector3[] pointsClockwise , float thickness, Color colour,
+            Style style = Style.Standard)
+        {
+            for (int i = 0; i < pointsClockwise.Length; i++)
+            {
+                DrawLine(pointsClockwise[i],pointsClockwise[(i+1)%pointsClockwise.Length],thickness,colour,style);
+            }
+        }
     }
 }

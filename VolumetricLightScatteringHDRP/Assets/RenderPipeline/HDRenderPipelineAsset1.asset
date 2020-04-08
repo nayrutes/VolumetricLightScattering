@@ -156,8 +156,8 @@ MonoBehaviour:
   m_DefaultLookDevProfile: {fileID: 0}
   m_RenderingPathDefaultCameraFrameSettings:
     bitDatas:
-      data1: 70297877217117
-      data2: 4539628424926265344
+      data1: 69842375802717
+      data2: 4539628424657960960
     lodBias: 1
     lodBiasMode: 0
     lodBiasQualityLevel: 0
@@ -167,7 +167,7 @@ MonoBehaviour:
     materialQuality: 0
   m_RenderingPathDefaultBakedOrCustomReflectionFrameSettings:
     bitDatas:
-      data1: 64942043591453
+      data1: 64873089233693
       data2: 4539628424389459968
     lodBias: 1
     lodBiasMode: 0
@@ -178,7 +178,7 @@ MonoBehaviour:
     materialQuality: 0
   m_RenderingPathDefaultRealtimeReflectionFrameSettings:
     bitDatas:
-      data1: 69692120112925
+      data1: 69271112654621
       data2: 4539628424389459968
     lodBias: 1
     lodBiasMode: 0

@@ -62,7 +62,7 @@ public class ShadowManager : MonoBehaviour
         cb.Dispose();
         
 
-        ProjectionTest.DrawDebugCube(lightCamera.transform,true);
+        ProjectionTest.DrawDebugCube(lightCamera.transform,true, Color.white);
         bool isInside;
         Vector3 projectedDebugLocal = ProjectionTest.WorldToProjectedLocal(DebugPoint, lightCamera.cam, true, out isInside);
         Vector3 projectedDebugWorld = ProjectionTest.ToWorld(projectedDebugLocal, lightCamera.cam.transform);

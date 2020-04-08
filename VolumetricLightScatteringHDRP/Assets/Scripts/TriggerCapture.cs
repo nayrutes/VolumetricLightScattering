@@ -8,6 +8,7 @@
      using System;
      using UnityEditor;
 
+     [ExecuteInEditMode]
      public class TriggerCapture : MonoBehaviour {
          public bool UseSimple = false;
          public Camera cam;
@@ -187,7 +188,7 @@
              RenderTexture.ReleaseTemporary(render_texture);
      
              //Texture2D.Destroy(tex_black);
-             Texture2D.Destroy(tex_white);
-             Texture2D.Destroy(tex_transparent);
+             Texture2D.DestroyImmediate(tex_white);
+             Texture2D.DestroyImmediate(tex_transparent);
          }
      }

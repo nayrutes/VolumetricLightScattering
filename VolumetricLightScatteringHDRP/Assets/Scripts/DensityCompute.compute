@@ -32,5 +32,5 @@ void CSMain (uint3 id : SV_DispatchThreadID)
     float yfactor = ((pointWS.y%2)/2);
     float fog=0.2*yfactor;
     densityBufferTexture[id] = float4(fog,fog,fog,0.5);
-    densityBufferTexture[id] = float4(1,1,1,1);
+    densityBufferTexture[id] = float4(0.8,0.8,0.8,0.1);
 }

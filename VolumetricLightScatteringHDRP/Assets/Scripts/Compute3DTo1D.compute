@@ -1,0 +1,80 @@
+﻿// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel CSMain
+
+// Create a RenderTexture with enableRandomWrite flag and set it
+// with cs.SetTexture
+//Texture3D<float4> Input;
+RWTexture3D<float4> Input;
+RWTexture2D<float4> Output;
+uint texelX;
+uint texelY;
+//float4 ratios;
+float4 size;
+
+//bool markSingle;
+//float4 singleFroxel;
+
+SamplerState samplerInput;
+
+[numthreads(16,1,1)]
+void CSMain (uint3 id : SV_DispatchThreadID)
+{
+    //uint2 texel = uint(texelX,texelY);
+    //left to right
+    for(int x = 0; x < size.x; x++)
+    {
+        if(x == texelX)
+        {
+            //bottom to top
+            for(int y = 0; y < size.y; y++)
+            {
+                if(y == texelY)
+                {
+                    uint3 pos3D = uint3(x,y,id.x);
+                    uint2 pos1D = uint2(id.x, 0);
+                    Output[pos1D] = Input[pos3D];
+                }
+            }
+        }
+        
+    }
+
+
+    /*
+    for (int zz = 0; zz < size.z; zz++) {
+    if(zz==toSlice)
+        {
+           
+           //Output[uint2(xx,yy)] = Input.SampleLevel(samplerInput, uint3(xx,yy,zz), 0);
+           Output[id.xy] = Input[uint3(id.xy,zz)];
+           
+           //DebugTest
+           //Output[id.xy] = float4(normalize(float3(id.xy,zz)),1);
+           
+           if(markSingle && toSlice == singleFroxel.z)
+           {
+                if(id.x == singleFroxel.x+1 && id.y == singleFroxel.y+1 
+                || id.x == singleFroxel.x+1 && id.y == singleFroxel.y-1 
+                || id.x == singleFroxel.x-1 && id.y == singleFroxel.y+1 
+                || id.x == singleFroxel.x-1 && id.y == singleFroxel.y-1
+                || id.x == singleFroxel.x && id.y == singleFroxel.y+1 
+                || id.x == singleFroxel.x && id.y == singleFroxel.y-1 
+                || id.x == singleFroxel.x-1 && id.y == singleFroxel.y 
+                || id.x == singleFroxel.x+1 && id.y == singleFroxel.y)
+                {
+                    Output[id.xy] = float4(0,1,1,1);
+                }
+           }
+        }
+    }
+    */
+    
+    
+    
+    
+    //if(id.z == toSlice)
+    //{
+    //    Output[id.xy] = Input[id.xyz];
+    //}
+    
+}

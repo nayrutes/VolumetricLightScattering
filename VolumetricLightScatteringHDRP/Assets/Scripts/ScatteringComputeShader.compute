@@ -141,11 +141,11 @@ void CSMain (uint3 id : SV_DispatchThreadID)
         float  extinction = density.a;
         
         float3 light = EvaluateLight(extinction, sliceDepthDelta, voxelCoordBuffer);
-        float4 blendValue = float4(light,  extinction * sliceDepthDelta );
+        float4 blendValue = float4(light,  extinction * sliceDepthDelta );//TODO split and rename currentOpticalDepth
         float transmittance = exp(-opticalDepth);
         float phase = 1;
         float3 probeRadiance = float3(0,0,0);
-        totalRadiance += (transmittance * fogColor * (phase * blendValue.rgb + probeRadiance))*sliceDepthDeltaWorld;
+        totalRadiance += (transmittance * fogColor * (phase * blendValue.rgb + probeRadiance))*sliceDepthDeltaWorld;//TODO replace blendValue with light and delete phase, probeRadiance 
         opticalDepth += 0.5 * blendValue.a;
         //Result[voxelCoordBuffer] = float4(totalRadiance, opticalDepth);
         
