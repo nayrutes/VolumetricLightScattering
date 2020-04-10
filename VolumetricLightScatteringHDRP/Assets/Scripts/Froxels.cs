@@ -73,7 +73,7 @@ public class Froxels : MonoBehaviour
             return m_CurveTexture;
         }
     }
-
+    [HideInInspector]
     public Vector3[] pointsCamRelative;
     public Camera _camera;
     private Froxel[] _froxelsCamRelative;
@@ -111,14 +111,27 @@ public class Froxels : MonoBehaviour
 //        public Vector3 corner6;
 //        public Vector3 corner7;
     }
-    
-    void Start()
+
+    private void OnEnable()
     {
         _camera = GetComponent<Camera>();
         _debugSlice = FindObjectOfType<DebugSlice>();
+    }
+
+    private void OnDisable()
+    {
+        CleanUpOrient();
+    }
+
+    void Start()
+    {
+        
        // _debugSlice.texture3DToSlice = scatteringOutput;
         //GenerateFroxels();
-        GenerateFroxelsInCameraSpace();
+        if (_froxelsCamRelative == null || _froxelsCamRelative.Length == 0)
+        {
+            GenerateFroxelsInCameraSpace();
+        }
     }
     
     public void SetUpShadow(int froxelCount)
@@ -132,6 +145,7 @@ public class Froxels : MonoBehaviour
 
     public void SetUpOrient()
     {
+        CleanUpOrient();
         ff = new FroxelFlat[_froxels.Length];
         cbOrientInput = new ComputeBuffer(ff.Length,sizeof(float)*3/*+sizeof(float)*3*8*/);
         
@@ -151,6 +165,12 @@ public class Froxels : MonoBehaviour
         cbOrientInput.SetData(ff);
         orientCompute.SetBuffer(0,"froxelsInput",cbOrientInput);
         orientCompute.SetBuffer(0,"froxelsOutput",cbOrientOutput);
+    }
+
+    public void CleanUpOrient()
+    {
+        cbOrientInput?.Dispose();
+        cbOrientOutput?.Dispose();
     }
     
     void Update()
@@ -249,7 +269,7 @@ public class Froxels : MonoBehaviour
 //        }
     }
 
-    private void GenerateFroxelsInCameraSpace()
+    public void GenerateFroxelsInCameraSpace()
     {
         depths = new float[amount.z+1];
         for (int z = 0; z <= amount.z; z++)

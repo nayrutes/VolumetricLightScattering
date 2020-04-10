@@ -61,45 +61,55 @@ public class DrawHelper : MonoBehaviour
         if (pointsCamRelative.Length < 4)
             return;
         
-        //z
-        for (int z = 0; z < amount.z+1; z++)
+        Matrix4x4 comb = _camera.transform.localToWorldMatrix;
+        for (int z = 0; z < amount.z + 1; z++)
         {
-            Matrix4x4 comb = _camera.transform.localToWorldMatrix;            
-
-            Vector3 bottomleft = pointsCamRelative[GetIndex(z,0,0,amount)];//lbn
-            Vector3 topleft = pointsCamRelative[GetIndex(z,amount.y,0,amount)];//ltn z y 0
-            Vector3 bottomright = pointsCamRelative[GetIndex(z,0,amount.x,amount)];//lbn z 0 x
-            Vector3 topright = pointsCamRelative[GetIndex(z,amount.y,amount.x,amount)];//ltn z y x
-            bottomleft = comb.MultiplyPoint3x4(bottomleft);
-            topleft = comb.MultiplyPoint3x4(topleft);
-            bottomright = comb.MultiplyPoint3x4(bottomright);
-            topright = comb.MultiplyPoint3x4(topright);
-            Vis.DrawLine(bottomleft,topleft, size,Color.cyan, Style.Unlit);
-            Vis.DrawLine(topright,bottomright, size,Color.cyan, Style.Unlit);
-            Vis.DrawLine(bottomleft,bottomright, size,Color.cyan, Style.Unlit);
-            Vis.DrawLine(topright,topleft, size,Color.cyan, Style.Unlit);
-            
+            DrawLeftToRight(0, z, pointsCamRelative, amount, comb);
+            DrawLeftToRight(amount.y, z, pointsCamRelative, amount, comb);
+            DrawBottomToTop(0, z, pointsCamRelative, amount, comb);
+            DrawBottomToTop(amount.x, z, pointsCamRelative, amount, comb);
         }
         
-        //y
-        for (int y = 0; y < amount.y+1; y++)
-        {
-            Matrix4x4 comb = _camera.transform.localToWorldMatrix;            
-
-            Vector3 leftNear = pointsCamRelative[GetIndex(0,y,0,amount)];
-            Vector3 leftFar = pointsCamRelative[GetIndex(0,y,amount.z,amount)];
-            Vector3 rightNear = pointsCamRelative[GetIndex(amount.x,y,0,amount)];
-            Vector3 rightFar = pointsCamRelative[GetIndex(amount.x,y,amount.z,amount)];
-            leftNear = comb.MultiplyPoint3x4(leftNear);
-            leftFar = comb.MultiplyPoint3x4(leftFar);
-            rightNear = comb.MultiplyPoint3x4(rightNear);
-            rightFar = comb.MultiplyPoint3x4(rightFar);
-            Vis.DrawLine(leftNear,leftFar, size,Color.cyan, Style.Unlit);
-            Vis.DrawLine(leftNear,rightNear, size,Color.cyan, Style.Unlit);
-            Vis.DrawLine(rightFar,rightNear, size,Color.cyan, Style.Unlit);
-            Vis.DrawLine(rightFar,leftFar, size,Color.cyan, Style.Unlit);
-            
-        }
+        //z
+//        for (int z = 0; z < amount.z+1; z++)
+//        {
+//            Matrix4x4 comb = _camera.transform.localToWorldMatrix;            
+//
+//            Vector3 bottomleft = pointsCamRelative[GetIndex(z,0,0,amount)];//lbn
+//            Vector3 topleft = pointsCamRelative[GetIndex(z,amount.y,0,amount)];//ltn z y 0
+//            Vector3 bottomright = pointsCamRelative[GetIndex(z,0,amount.x,amount)];//lbn z 0 x
+//            Vector3 topright = pointsCamRelative[GetIndex(z,amount.y,amount.x,amount)];//ltn z y x
+//            bottomleft = comb.MultiplyPoint3x4(bottomleft);
+//            topleft = comb.MultiplyPoint3x4(topleft);
+//            bottomright = comb.MultiplyPoint3x4(bottomright);
+//            topright = comb.MultiplyPoint3x4(topright);
+//            Vis.DrawLine(bottomleft,topleft, size,Color.cyan, Style.Unlit);
+//            Vis.DrawLine(topright,bottomright, size,Color.cyan, Style.Unlit);
+//            Vis.DrawLine(bottomleft,bottomright, size,Color.cyan, Style.Unlit);
+//            Vis.DrawLine(topright,topleft, size,Color.cyan, Style.Unlit);
+//            
+//            
+//        }
+//        
+//        //y
+//        for (int y = 0; y < amount.y+1; y++)
+//        {
+//            Matrix4x4 comb = _camera.transform.localToWorldMatrix;            
+//
+//            Vector3 leftNear = pointsCamRelative[GetIndex(0,y,0,amount)];
+//            Vector3 leftFar = pointsCamRelative[GetIndex(0,y,amount.z,amount)];
+//            Vector3 rightNear = pointsCamRelative[GetIndex(amount.x,y,0,amount)];
+//            Vector3 rightFar = pointsCamRelative[GetIndex(amount.x,y,amount.z,amount)];
+//            leftNear = comb.MultiplyPoint3x4(leftNear);
+//            leftFar = comb.MultiplyPoint3x4(leftFar);
+//            rightNear = comb.MultiplyPoint3x4(rightNear);
+//            rightFar = comb.MultiplyPoint3x4(rightFar);
+//            Vis.DrawLine(leftNear,leftFar, size,Color.cyan, Style.Unlit);
+//            Vis.DrawLine(leftNear,rightNear, size,Color.cyan, Style.Unlit);
+//            Vis.DrawLine(rightFar,rightNear, size,Color.cyan, Style.Unlit);
+//            Vis.DrawLine(rightFar,leftFar, size,Color.cyan, Style.Unlit);
+//            
+//        }
     }
 
 
