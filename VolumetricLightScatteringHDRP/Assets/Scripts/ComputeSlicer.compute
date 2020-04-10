@@ -16,9 +16,16 @@ float4 singleFroxel;
 
 SamplerState samplerInput;
 
-[numthreads(16,16,1)]
+bool EarlyOut(uint3 id, float4 size)
+{
+    return (id.x >= size.x || id.y >= size.y || id.z >= size.z);
+}
+
+[numthreads(8,8,1)]
 void CSMain (uint3 id : SV_DispatchThreadID)
 {
+     if(EarlyOut(id, size))
+        return;
     // TODO: insert actual code here!
      /*
      for (int x = 0; x < size.x; x++) {

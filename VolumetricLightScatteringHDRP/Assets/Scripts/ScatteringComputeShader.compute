@@ -13,8 +13,13 @@ SamplerState samplerCamDepth;
 StructuredBuffer<float> depths;
 uint VOLUME_DEPTH;
 float4 insetValue;
-float3 size;
+float4 size;
 float4 _ZBufferParams;
+
+bool EarlyOut(uint3 id, float4 size)
+{
+    return (id.x >= size.x || id.y >= size.y || id.z >= size.z);
+}
 
 //Beer-Lambert's Law?
 //One Step
@@ -67,6 +72,8 @@ float3 EvaluateLight(float extinction, float intervalLength, float3 voxelCoordBu
 [numthreads(32,32,1)]
 void CSMain (uint3 id : SV_DispatchThreadID)
 {    
+    if(EarlyOut(id, size))
+        return;
     //actual calculation
     /*for (uint x=0; x<size.x; x++){
         for (uint y=0; y<size.y; y++){

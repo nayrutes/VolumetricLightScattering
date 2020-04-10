@@ -108,7 +108,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - debugTexture:
-        m_Texture: {fileID: 8400000, guid: 3a966f13335df254c9d1f63091dab6f1, type: 2}
+        m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     m_Floats:
@@ -232,7 +232,7 @@ Material:
     - _ZTestTransparent: 4
     - _ZWrite: 1
     - alphaToWhite: 0
-    - size: 0.292
+    - size: 0.221
     m_Colors:
     - _BaseColor: {r: 1, g: 1, b: 1, a: 1}
     - _BaseColorMap_MipInfo: {r: 0, g: 0, b: 0, a: 0}
@@ -250,7 +250,7 @@ Material:
     - _UVDetailsMappingMask: {r: 1, g: 0, b: 0, a: 0}
     - _UVMappingMask: {r: 1, g: 0, b: 0, a: 0}
     - _UVMappingMaskEmissive: {r: 1, g: 0, b: 0, a: 0}
-    - debugImageSize: {r: 128, g: 1, b: 0, a: 0}
+    - debugImageSize: {r: 80, g: 45, b: 0, a: 0}
 --- !u!114 &1682116775788344728
 MonoBehaviour:
   m_ObjectHideFlags: 11

@@ -1068,7 +1068,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_Profile: {fileID: 11400000, guid: ed73a7fe4de266a4abcb04c3731a8fed, type: 2}
   m_StaticLightingSkyUniqueID: 3
-  m_SkySettings: {fileID: 1305768980}
+  m_SkySettings: {fileID: 1520925109}
   m_SkySettingsFromProfile: {fileID: -7437363794055793452, guid: ed73a7fe4de266a4abcb04c3731a8fed,
     type: 2}
 --- !u!4 &856560287
@@ -1539,76 +1539,6 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 6
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1305768980
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a81bcacc415a1f743bfdf703afc52027, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  active: 1
-  m_AdvancedMode: 0
-  rotation:
-    m_OverrideState: 0
-    m_Value: 0
-    min: 0
-    max: 360
-  skyIntensityMode:
-    m_OverrideState: 0
-    m_Value: 0
-  exposure:
-    m_OverrideState: 0
-    m_Value: 8.5
-  multiplier:
-    m_OverrideState: 0
-    m_Value: 1
-    min: 0
-  upperHemisphereLuxValue:
-    m_OverrideState: 0
-    m_Value: 1
-    min: 0
-  upperHemisphereLuxColor:
-    m_OverrideState: 0
-    m_Value: {x: 0, y: 0, z: 0}
-  desiredLuxValue:
-    m_OverrideState: 0
-    m_Value: 20000
-  updateMode:
-    m_OverrideState: 0
-    m_Value: 2
-  updatePeriod:
-    m_OverrideState: 0
-    m_Value: 1
-    min: 0
-  includeSunInBaking:
-    m_OverrideState: 0
-    m_Value: 0
-  top:
-    m_OverrideState: 0
-    m_Value: {r: 0, g: 0, b: 0, a: 1}
-    hdr: 1
-    showAlpha: 0
-    showEyeDropper: 1
-  middle:
-    m_OverrideState: 0
-    m_Value: {r: 0, g: 0, b: 0, a: 1}
-    hdr: 1
-    showAlpha: 0
-    showEyeDropper: 1
-  bottom:
-    m_OverrideState: 0
-    m_Value: {r: 0, g: 0, b: 0, a: 1}
-    hdr: 1
-    showAlpha: 0
-    showEyeDropper: 1
-  gradientDiffusion:
-    m_OverrideState: 0
-    m_Value: 1
 --- !u!1001 &1370243754
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2096,8 +2026,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   texture3D: {fileID: 8400000, guid: 43b0296d965346d48800cfdd278f31d7, type: 2}
   texture1D: {fileID: 8400000, guid: 3a966f13335df254c9d1f63091dab6f1, type: 2}
-  texel: {x: 0, y: 0}
+  texel: {x: 35, y: 32}
   computeShader: {fileID: 7200000, guid: aa7b40eec1ee2984e900073716a7efa3, type: 3}
+  adjust1D: 0
+  adjust3D: 0
 --- !u!4 &1460036559
 Transform:
   m_ObjectHideFlags: 0
@@ -2160,6 +2092,76 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 2
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1520925109
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a81bcacc415a1f743bfdf703afc52027, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  active: 1
+  m_AdvancedMode: 0
+  rotation:
+    m_OverrideState: 0
+    m_Value: 0
+    min: 0
+    max: 360
+  skyIntensityMode:
+    m_OverrideState: 0
+    m_Value: 0
+  exposure:
+    m_OverrideState: 0
+    m_Value: 8.5
+  multiplier:
+    m_OverrideState: 0
+    m_Value: 1
+    min: 0
+  upperHemisphereLuxValue:
+    m_OverrideState: 0
+    m_Value: 1
+    min: 0
+  upperHemisphereLuxColor:
+    m_OverrideState: 0
+    m_Value: {x: 0, y: 0, z: 0}
+  desiredLuxValue:
+    m_OverrideState: 0
+    m_Value: 20000
+  updateMode:
+    m_OverrideState: 0
+    m_Value: 2
+  updatePeriod:
+    m_OverrideState: 0
+    m_Value: 1
+    min: 0
+  includeSunInBaking:
+    m_OverrideState: 0
+    m_Value: 0
+  top:
+    m_OverrideState: 0
+    m_Value: {r: 0, g: 0, b: 0, a: 1}
+    hdr: 1
+    showAlpha: 0
+    showEyeDropper: 1
+  middle:
+    m_OverrideState: 0
+    m_Value: {r: 0, g: 0, b: 0, a: 1}
+    hdr: 1
+    showAlpha: 0
+    showEyeDropper: 1
+  bottom:
+    m_OverrideState: 0
+    m_Value: {r: 0, g: 0, b: 0, a: 1}
+    hdr: 1
+    showAlpha: 0
+    showEyeDropper: 1
+  gradientDiffusion:
+    m_OverrideState: 0
+    m_Value: 1
 --- !u!1 &1827429891
 GameObject:
   m_ObjectHideFlags: 0
@@ -2378,14 +2380,14 @@ MonoBehaviour:
   densityCompute: {fileID: 7200000, guid: 0f352277c3b178f43bf20be67fcd8f11, type: 3}
   insetValue: {x: 0.5, y: 0.5, z: 0.5, w: 0.1}
   shadowManager: {fileID: 1896242501}
-  amount: {x: 64, y: 64, z: 128}
+  amount: {x: 80, y: 45, z: 64}
   enableDebugDraw: 0
   drawCorners: 0
   drawEdges: 1
   drawSingle: 0
-  drawAll: 0
+  drawAll: 1
   toggleSingleAll: 0
-  singleFroxel: {x: 6, y: 10, z: 4}
+  singleFroxel: {x: 6, y: 8, z: 4}
   orientFroxels: 1
   calculateDensity: 1
   enableScatteringCompute: 1
@@ -2396,22 +2398,22 @@ MonoBehaviour:
     serializedVersion: 2
     m_Curve:
     - serializedVersion: 3
-      time: 0
+      time: -0.0030212402
       value: 0
-      inSlope: 1
-      outSlope: 1
-      tangentMode: 34
-      weightedMode: 0
+      inSlope: 0.007911367
+      outSlope: 0.007911367
+      tangentMode: 0
+      weightedMode: 2
       inWeight: 0
-      outWeight: 0
+      outWeight: 0.5651106
     - serializedVersion: 3
       time: 1
       value: 1
-      inSlope: 1
-      outSlope: 1
-      tangentMode: 34
-      weightedMode: 0
-      inWeight: 0
+      inSlope: 362.11383
+      outSlope: 362.11383
+      tangentMode: 0
+      weightedMode: 1
+      inWeight: 0.0024569312
       outWeight: 0
     m_PreInfinity: 2
     m_PostInfinity: 2
@@ -2523,14 +2525,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e98fcc051e5e88043b56ea2ca443db2b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  texture3DToSlice: {fileID: 8400000, guid: 43b0296d965346d48800cfdd278f31d7, type: 2}
+  texture3DToSlice: {fileID: 8400000, guid: a56ec63a415476e45b2523978d07a1d4, type: 2}
   texture2D: {fileID: 8400000, guid: 3a966f13335df254c9d1f63091dab6f1, type: 2}
-  switchTo2D: 1
-  size: 0.292
-  slice: 0.809
+  switchTo2D: 0
+  size: 0.221
+  slice: 0.212
   syncSliceWithFroxel: 0
   alphaToWhite: 0
-  slice_: 103
+  slice_: 13
   debugMaterial: {fileID: 2100000, guid: fcb86e3c7803a1b4fada1d5a0e28cea5, type: 2}
   slicer: {fileID: 7200000, guid: f3ee15b372478434eb21fdcbf0f0e07c, type: 3}
 --- !u!114 &1827429900

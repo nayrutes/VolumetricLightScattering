@@ -54,7 +54,9 @@ public class DebugSlice : MonoBehaviour
         slicer.SetVector("singleFroxel", new Vector4(_froxels.singleFroxel.x,_froxels.singleFroxel.y,_froxels.singleFroxel.z,0));
         slicer.SetBool("markSingle", !_froxels.toggleSingleAll);
         //int threadGroupsX = texture3DToSlice.volumeDepth / 256;
-        slicer.Dispatch(0, texture3DToSlice.width/16,texture3DToSlice.height/16,1);
+        Vector3Int dispatches = new Vector3Int(Froxels.CeilDispatch(texture3DToSlice.width,8),Froxels.CeilDispatch(texture3DToSlice.height,8),1);
+        slicer.Dispatch(0,dispatches.x,dispatches.y,dispatches.z);
+        //slicer.Dispatch(0, texture3DToSlice.width/8,texture3DToSlice.height/8,1);
     }
 
     //private int sliceTmp = -1;

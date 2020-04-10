@@ -9,6 +9,7 @@ public class ShadowManager : MonoBehaviour
 
     [SerializeField] private ComputeShader lightAccumulation;
 
+    private bool debug = false;
     public Vector3 DebugPoint;
     [Range(0,1.0f)]
     public float DebugDepth;
@@ -57,27 +58,30 @@ public class ShadowManager : MonoBehaviour
         ComputeBuffer cb = new ComputeBuffer(points4.Length,sizeof(float)*4);
         cb.SetData(points4);
         lightAccumulation.SetBuffer(kernelId,"points",cb);
-        lightAccumulation.Dispatch(kernelId,lightBufferTexture.height/8,lightBufferTexture.width/8,lightBufferTexture.volumeDepth/16);
+        Vector3Int dispatches = new Vector3Int(Froxels.CeilDispatch(lightBufferTexture.width,8),Froxels.CeilDispatch(lightBufferTexture.height,8),Froxels.CeilDispatch(lightBufferTexture.volumeDepth,16));
+        lightAccumulation.Dispatch(kernelId,dispatches.x,dispatches.y,dispatches.z);
         
         cb.Dispose();
-        
 
-        ProjectionTest.DrawDebugCube(lightCamera.transform,true, Color.white);
-        bool isInside;
-        Vector3 projectedDebugLocal = ProjectionTest.WorldToProjectedLocal(DebugPoint, lightCamera.cam, true, out isInside);
-        Vector3 projectedDebugWorld = ProjectionTest.ToWorld(projectedDebugLocal, lightCamera.cam.transform);
-        Froxels.DrawPointCross(projectedDebugWorld,0.3f,isInside ? Color.white : Color.red);
-        Froxels.DrawPointCross(DebugPoint,0.3f,Color.blue);
+        if (debug)
+        {
+            ProjectionTest.DrawDebugCube(lightCamera.transform,true, Color.white);
+            bool isInside;
+            Vector3 projectedDebugLocal = ProjectionTest.WorldToProjectedLocal(DebugPoint, lightCamera.cam, true, out isInside);
+            Vector3 projectedDebugWorld = ProjectionTest.ToWorld(projectedDebugLocal, lightCamera.cam.transform);
+            Froxels.DrawPointCross(projectedDebugWorld,0.3f,isInside ? Color.white : Color.red);
+            Froxels.DrawPointCross(DebugPoint,0.3f,Color.blue);
 
-        Vector3 lightWS = lightCamera.cam.transform.position;
-        Froxels.DrawPointCross(lightWS,1.0f,Color.green);
-        int index = debugIndex;
-        Vector3 pointWS = new Vector3(points4[index].x,points4[index].y,points4[index].z);
-        Froxels.DrawPointCross(pointWS,1.0f,Color.red);
-        Vector3 pointToLightRay = lightWS-pointWS;
-        float pointToLightDistance = Vector3.Distance(lightWS,pointWS);
-        float weight =  Mathf.Exp(-(pointToLightDistance));
-        Debug.DrawLine(lightWS,pointWS,Color.green);
+            Vector3 lightWS = lightCamera.cam.transform.position;
+            Froxels.DrawPointCross(lightWS,1.0f,Color.green);
+            int index = debugIndex;
+            Vector3 pointWS = new Vector3(points4[index].x,points4[index].y,points4[index].z);
+            Froxels.DrawPointCross(pointWS,1.0f,Color.red);
+            Vector3 pointToLightRay = lightWS-pointWS;
+            float pointToLightDistance = Vector3.Distance(lightWS,pointWS);
+            float weight =  Mathf.Exp(-(pointToLightDistance));
+            Debug.DrawLine(lightWS,pointWS,Color.green);
+        }
     }
     
     //shifts a point from [-1, 1] unit cube into [0, 1] unit cube 

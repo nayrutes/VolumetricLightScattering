@@ -681,7 +681,8 @@ public class Froxels : MonoBehaviour
         scatteringCompute.SetBuffer(0,"depths",cb2);
         //int threadGroupsX = amount.z / 256;
         scatteringCompute.SetInt("VOLUME_DEPTH",amount.z);
-        scatteringCompute.Dispatch(0, (int)(size.x/32.0f),(int)(size.y/32.0f),1);
+        Vector3Int dispatches = new Vector3Int(CeilDispatch(size.x,32),CeilDispatch(size.y,32),1);
+        scatteringCompute.Dispatch(0, dispatches.x,dispatches.y,dispatches.z);
         
         cb2.Dispose();
     }
@@ -694,7 +695,8 @@ public class Froxels : MonoBehaviour
         ComputeBuffer cb3 = new ComputeBuffer(points4.Length,sizeof(float)*4);
         cb3.SetData(points4);
         densityCompute.SetBuffer(0,"points",cb3);
-        densityCompute.Dispatch(0,densityBufferTexture.height/8,densityBufferTexture.width/8,densityBufferTexture.volumeDepth/16);
+        Vector3Int dispatches = new Vector3Int(CeilDispatch(densityBufferTexture.width,8),CeilDispatch(densityBufferTexture.height,8),CeilDispatch(densityBufferTexture.volumeDepth,16));
+        densityCompute.Dispatch(0,dispatches.x,dispatches.y,dispatches.z);
         
         cb3.Dispose();
     }
@@ -853,6 +855,15 @@ public class Froxels : MonoBehaviour
             Debug.DrawLine(topright,topleft,Color.cyan);
         }
         
+    }
+
+    public static int CeilDispatch(int texPixels, int threads)
+    {
+        return Mathf.CeilToInt(texPixels / (float) threads);
+    }
+    public static int CeilDispatch(float texPixels, int threads)
+    {
+        return Mathf.CeilToInt(texPixels / (float) threads);
     }
 //    public static void GetFlat(ref Froxel f, ref FroxelFlat ff)
 //    {

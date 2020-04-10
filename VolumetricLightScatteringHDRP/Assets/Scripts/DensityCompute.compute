@@ -11,6 +11,10 @@ RWTexture3D<float4> densityBufferTexture;
 StructuredBuffer<float4> points;
 float4 Input_TexelSize;
 
+bool EarlyOut(uint3 id, float4 size)
+{
+    return (id.x >= size.x || id.y >= size.y || id.z >= size.z);
+}
 
 //singleFroxel.z * (amount.x * amount.y) + singleFroxel.y * amount.x + singleFroxel.x
 uint flat(uint3 id)
@@ -28,9 +32,13 @@ float3 WorldToProjectedLocal(float3 p)
 [numthreads(8,8,16)]
 void CSMain (uint3 id : SV_DispatchThreadID)
 {
+    if(EarlyOut(id, Input_TexelSize))
+        return;
+
     float3 pointWS = points[flat(id)];
     float yfactor = ((pointWS.y%2)/2);
     float fog=0.2*yfactor;
     densityBufferTexture[id] = float4(fog,fog,fog,0.5);
     densityBufferTexture[id] = float4(0.8,0.8,0.8,0.1);
+    //densityBufferTexture[id] = float4(id.x/Input_TexelSize.x, id.y/Input_TexelSize.y, id.z/Input_TexelSize.z, 0.1);
 }

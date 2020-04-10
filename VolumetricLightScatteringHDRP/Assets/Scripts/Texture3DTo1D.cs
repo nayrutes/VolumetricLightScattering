@@ -58,8 +58,9 @@ public class Texture3DTo1D : MonoBehaviour
         //computeShader.SetInt("toSlice", sliceInt);
         //computeShader.SetVector("singleFroxel", new Vector4(_froxels.singleFroxel.x,_froxels.singleFroxel.y,_froxels.singleFroxel.z,0));
         //computeShader.SetBool("markSingle", !_froxels.toggleSingleAll);
-        
-        computeShader.Dispatch(0, size.z/16,1, 1);
+        Vector3Int dispatches = new Vector3Int(Froxels.CeilDispatch(size.z,16),1,1);
+        computeShader.Dispatch(0,dispatches.x,dispatches.y,dispatches.z);
+        //computeShader.Dispatch(0, size.z/16,1, 1);
     }
     
     private static void AdjustRenderTexture(ref RenderTexture r, Vector3Int size, bool depth = true, bool randomwrite = true)
