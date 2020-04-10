@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
+using UnityEngine.Serialization;
 
 public class ShadowManager : MonoBehaviour
 {
@@ -9,11 +10,22 @@ public class ShadowManager : MonoBehaviour
 
     [SerializeField] private ComputeShader lightAccumulation;
 
+    public ScatFunction activeScatteringFunction;
+    [Range(-1f, 1f)] public float forwardBackwardPreference;
+    
     private bool debug = false;
     public Vector3 DebugPoint;
     [Range(0,1.0f)]
     public float DebugDepth;
 
+    
+    public enum ScatFunction
+    {
+        IsotropicPhase,
+        RayleighPhase,
+        HenyeyGreensteinPhase,
+        SchlickPhase
+    }
     
     // Start is called before the first frame update
     void Start()
@@ -29,7 +41,7 @@ public class ShadowManager : MonoBehaviour
 
     
     
-    public void CalculateShadows(RenderTexture lightBufferTexture,Vector4[] points4 , bool enableTransformedChilds, int debugIndex)
+    public void CalculateShadows(RenderTexture lightBufferTexture,Vector4[] points4 , Vector4 cameraPos, bool enableTransformedChilds, int debugIndex)
     {
         Matrix4x4 scaleMatrix = Matrix4x4.identity;
         scaleMatrix.m22 = -1.0f;
@@ -45,7 +57,26 @@ public class ShadowManager : MonoBehaviour
         lightAccumulation.SetMatrix("convertTo01",CreateConvertionMatrixMinus11To01());
         lightAccumulation.SetVector("Input_TexelSize",new Vector4(lightBufferTexture.width,lightBufferTexture.height,lightBufferTexture.volumeDepth,0));
         lightAccumulation.SetVector("lightWS",lightCamera.cam.transform.position);
-        
+        cameraPos.w = 1;
+        lightAccumulation.SetVector("cameraPosWS", cameraPos);
+        int scatf = 0;
+        switch (activeScatteringFunction)
+        {
+            case ScatFunction.IsotropicPhase:
+                scatf = 0;
+                break;
+            case ScatFunction.RayleighPhase:
+                scatf = 1;
+                break;
+            case ScatFunction.HenyeyGreensteinPhase:
+                scatf = 2;
+                break;
+            case ScatFunction.SchlickPhase:
+                scatf = 3;
+                break;
+        }
+        lightAccumulation.SetInt("scatteringFunction",scatf);
+        lightAccumulation.SetFloat("forBackScat", forwardBackwardPreference);
         //var watch = System.Diagnostics.Stopwatch.StartNew();
         //
         

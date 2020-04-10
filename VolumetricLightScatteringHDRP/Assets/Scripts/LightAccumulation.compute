@@ -15,6 +15,9 @@ float4x4 vp;
 float4x4 convertTo01;
 StructuredBuffer<float4> points;
 float4 Input_TexelSize;
+float4 cameraPosWS;
+int scatteringFunction;
+float forBackScat;
 
 
 bool EarlyOut(uint3 id, float4 size)
@@ -28,36 +31,28 @@ uint flat(uint3 id)
     return id.z * (Input_TexelSize.x * Input_TexelSize.y) + id.y * Input_TexelSize.x + id.x;
 }
 
-/*public static Vector3 WorldToProjectedLocal(Vector3 pWorld, Camera c, bool normalizedTo01, out bool isInside)
-    {
-        //Point from World to Box
-        Matrix4x4 camP = c.projectionMatrix;
-        Vector4 pWorld4 = pWorld.ToVector4();
-        Matrix4x4 scaleMatrix = Matrix4x4.identity;
-        scaleMatrix.m22 = -1.0f;
-        Matrix4x4 v = scaleMatrix * c.transform.worldToLocalMatrix;
-        Matrix4x4 vp = camP * v;
-        //get point projected in localSpace
-        Vector4 pointProjected = vp * pWorld4;
-        //correct projection by depthfactor -> now in box
-        pointProjected /= pointProjected.w;
-        Color cResult;
-        //!!!! Only z-Tested !!!!
-        isInside = (pointProjected.z <= 1 && pointProjected.z >= -1 && pointProjected.x <= 1 && pointProjected.x >= -1 &&
-                     pointProjected.y <= 1 && pointProjected.y >= -1);
-        if (normalizedTo01)
-        {
-            Matrix4x4 converter = CreateConvertionMatrixMinus11To01();
-            pointProjected = converter *pointProjected; // same as MultiplyPoint3x4, ignore scaling
-        }
+float IsotropicPhase(){
+    return 1/(4*M_PI);
+}
 
-        return pointProjected;
-    }*/
-    
-float3 WorldToProjectedLocal(float3 p)
+//radians 
+float RayleighPhase(float angle)
 {
-    float4 p4 = float4(p.xyz,1);
-    return p4;
+    float cosTmp = cos(angle);
+    return (3/(16*M_PI)) * (1 + cosTmp*cosTmp);
+}
+//radian, [-1,1]
+float HenyeyGreensteinPhase(float angle, float forBackScat)
+{
+    float g2 = forBackScat*forBackScat;
+    return (1-g2)/4*M_PI*pow((1+g2-2*forBackScat*cos(angle)),1.5);
+}
+
+float SchlickPhase(float angle, float forBackScat)
+{
+    float k2 = forBackScat*forBackScat;
+    float part = 1 + forBackScat*cos(angle);
+    return (1-k2)/(4*M_PI*(part*part));
 }
 
 [numthreads(8,8,16)]
@@ -88,7 +83,30 @@ void CSMain (uint3 id : SV_DispatchThreadID)
     //float depth = tex2D(samplerLightDepth, pointProjected.xy).r;
     float3 pointToLightRay = lightWS-pointWS;
     float pointToLightDistance = distance(pointWS.xyz,lightWS.xyz);
-    float phase = 1/(4*M_PI);
+    float3 pointToCam = cameraPosWS-lightWS;
+   
+   //---Phase functions---
+    float phase = 0;
+    if(scatteringFunction <1)
+    {
+        phase = IsotropicPhase();
+    }else
+    {
+        float3 pointToLightRayN = normalize(pointToLightRay);
+        float3 pointToCamN = normalize(pointToCam);
+        float angle = acos(dot(-pointToLightRayN, pointToCamN));
+        
+        if(scatteringFunction < 2)
+        {
+            phase = RayleighPhase(angle);
+        }else if(scatteringFunction < 3)
+        {
+            phase = HenyeyGreensteinPhase(angle, forBackScat);
+        }else{
+            phase = SchlickPhase(angle, forBackScat);
+        }
+    }
+    
     
     if(inside){
         if(1-depth < pointProjected.z)
