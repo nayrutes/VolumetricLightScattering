@@ -60,15 +60,6 @@ void CSMain (uint3 id : SV_DispatchThreadID)
 {
      if(EarlyOut(id, Input_TexelSize))
         return;
-    // TODO: insert actual code here!
-    //Calculate Light influence on voxel (sample shadowmap?)
-//    Result[id.xy] = float4(id.x & id.y, (id.x & 15)/15.0, (id.y & 15)/15.0, 0.0);
-    
-    //RemoveLater?
-    //Input[id] = float4(0,0.1,0.1,0.1);
-    //uint index = flat(id);
-    //float4 p = points[index];
-    
     lightBufferTexture[id] = float4(0.1,0.1,0.1,0.05);//Ambient light
     lightBufferTexture[id] = float4(0,0,0,0);
     //for each light
@@ -80,7 +71,7 @@ void CSMain (uint3 id : SV_DispatchThreadID)
     
     pointProjected = mul(convertTo01,pointProjected);
     float depth = LightDepth.SampleLevel(samplerLightDepth,pointProjected.xy,0).r;
-    //float depth = tex2D(samplerLightDepth, pointProjected.xy).r;
+    
     float3 pointToLightRay = lightWS-pointWS;
     float pointToLightDistance = distance(pointWS.xyz,lightWS.xyz);
     float3 pointToCam = cameraPosWS-lightWS;
@@ -124,24 +115,12 @@ void CSMain (uint3 id : SV_DispatchThreadID)
             float weight =  exp(-(pointToLightDistance));
             //weight = 1;
             intensity *= weight;
-            //color += intensity*(newColor.rgb);
-            //color = color/(intensity+old);
-            //intensity = (intensity +old.a);
             color = saturate(intensity * newColor * phase);
             intensity = clamp(intensity,0,1);
             lightBufferTexture[id] = float4(color.rgb, intensity);//set light color and intensity
-            //lightBufferTexture[id]  = float4(0.5,0.5,0.5,1);
         }
     }else
     {
-        //lightBufferTexture[id] = float4(0,0,0,0);
+        
     }
-    //Result[id] = float4(depth,depth,depth,1);
-    //Result[id] = LightDepth.SampleLevel(samplerLightDepth,pointProjected.xy,0).a;
-    //points all 0!?!?
-    //float4 t = float4(1 - points[flat(id)].xyz, 0.5);//+float4(1,1,1,0);
-    //Result[id] = t;
-    //Result[id] = float4(normalize(Input[id].xyz),0.5);
-    //Result[id] = float4(id.x & id.y, (id.x & 15)/15.0, (id.z & 15)/15.0, 1.0);
-    //Result[id] = LightDepth[id.xy];
 }

@@ -35,10 +35,10 @@ void CSMain (uint3 id : SV_DispatchThreadID)
     if(EarlyOut(id, Input_TexelSize))
         return;
 
-    float3 pointWS = points[flat(id)];
-    float yfactor = ((pointWS.y%2)/2);
-    float fog=0.2*yfactor;
-    densityBufferTexture[id] = float4(fog,fog,fog,0.5);
+    //float3 pointWS = points[flat(id)];
+    //float yfactor = ((pointWS.y%2)/2);
+    //float fog=0.2*yfactor;
+    //densityBufferTexture[id] = float4(fog,fog,fog,0.5);
     densityBufferTexture[id] = float4(0.8,0.8,0.8,0.07);
     //densityBufferTexture[id] = float4(id.x/Input_TexelSize.x, id.y/Input_TexelSize.y, id.z/Input_TexelSize.z, 0.1);
 }
