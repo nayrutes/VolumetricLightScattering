@@ -116,7 +116,7 @@ void CSMain (uint3 id : SV_DispatchThreadID)
             float4 old = lightBufferTexture[id];
             float3 color = old.rgb;
             float intensity =100;
-            float3 newColor =float3(0.5,0.5,0.5);
+            float3 newColor =float3(1,0.9,0.42);
             
             pointToLightDistance = sqrt(pointToLightDistance);
             

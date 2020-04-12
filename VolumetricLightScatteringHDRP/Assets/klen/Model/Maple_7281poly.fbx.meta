@@ -1,0 +1,197 @@
+fileFormatVersion: 2
+guid: f09ed798ee7dcf440bcd3964aaf55f94
+timeCreated: 1506258408
+licenseType: Store
+ModelImporter:
+  serializedVersion: 21
+  fileIDToRecycleName:
+    100000: Bone149
+    100002: Bone150
+    100004: Bone155
+    100006: Bone156
+    100008: Bone159
+    100010: Bone160
+    100012: Bone174
+    100014: Bone175
+    100016: Bone179
+    100018: Bone180
+    100020: Bone183
+    100022: Bone184
+    100024: Bone185
+    100026: Bone186
+    100028: Bone189
+    100030: Bone190
+    100032: Bone215
+    100034: Bone216
+    100036: joint1
+    100038: joint2
+    100040: Line050
+    100042: Line056
+    100044: Line057
+    100046: //RootNode
+    100048: Maple_7281poly
+    100050: Object1088
+    100052: Object1090
+    100054: Object1097
+    100056: Object1098
+    100058: Object1100
+    100060: Object1101
+    100062: Object1102
+    100064: transform1
+    100066: transform10
+    100068: transform2
+    100070: transform3
+    100072: transform4
+    100074: transform5
+    100076: transform6
+    100078: transform7
+    100080: transform8
+    100082: transform9
+    400000: Bone149
+    400002: Bone150
+    400004: Bone155
+    400006: Bone156
+    400008: Bone159
+    400010: Bone160
+    400012: Bone174
+    400014: Bone175
+    400016: Bone179
+    400018: Bone180
+    400020: Bone183
+    400022: Bone184
+    400024: Bone185
+    400026: Bone186
+    400028: Bone189
+    400030: Bone190
+    400032: Bone215
+    400034: Bone216
+    400036: joint1
+    400038: joint2
+    400040: Line050
+    400042: Line056
+    400044: Line057
+    400046: //RootNode
+    400048: Maple_7281poly
+    400050: Object1088
+    400052: Object1090
+    400054: Object1097
+    400056: Object1098
+    400058: Object1100
+    400060: Object1101
+    400062: Object1102
+    400064: transform1
+    400066: transform10
+    400068: transform2
+    400070: transform3
+    400072: transform4
+    400074: transform5
+    400076: transform6
+    400078: transform7
+    400080: transform8
+    400082: transform9
+    4300000: Maple_7281poly
+    7400000: Wind
+    9500000: //RootNode
+    13700000: Maple_7281poly
+  materials:
+    importMaterials: 1
+    materialName: 0
+    materialSearch: 1
+  animations:
+    legacyGenerateAnimations: 4
+    bakeSimulation: 0
+    resampleCurves: 1
+    optimizeGameObjects: 0
+    motionNodeName: 
+    rigImportErrors: 
+    rigImportWarnings: 
+    animationImportErrors: 
+    animationImportWarnings: 
+    animationRetargetingWarnings: 
+    animationDoRetargetingWarnings: 0
+    animationCompression: 0
+    animationRotationError: 0.5
+    animationPositionError: 0.5
+    animationScaleError: 0.5
+    animationWrapMode: 0
+    extraExposedTransformPaths: []
+    clipAnimations:
+    - serializedVersion: 16
+      name: Wind
+      takeName: Take 001
+      firstFrame: 0
+      lastFrame: 200
+      wrapMode: 0
+      orientationOffsetY: 0
+      level: 0
+      cycleOffset: 0
+      loop: 0
+      hasAdditiveReferencePose: 0
+      loopTime: 1
+      loopBlend: 1
+      loopBlendOrientation: 0
+      loopBlendPositionY: 0
+      loopBlendPositionXZ: 0
+      keepOriginalOrientation: 0
+      keepOriginalPositionY: 1
+      keepOriginalPositionXZ: 0
+      heightFromFeet: 0
+      mirror: 0
+      bodyMask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
+      curves: []
+      events: []
+      transformMask: []
+      maskType: 3
+      maskSource: {instanceID: 0}
+      additiveReferencePoseFrame: 0
+    isReadable: 0
+  meshes:
+    lODScreenPercentages: []
+    globalScale: 22
+    meshCompression: 0
+    addColliders: 0
+    importVisibility: 0
+    importBlendShapes: 0
+    importCameras: 0
+    importLights: 0
+    swapUVChannels: 0
+    generateSecondaryUV: 1
+    useFileUnits: 1
+    optimizeMeshForGPU: 1
+    keepQuads: 0
+    weldVertices: 0
+    secondaryUVAngleDistortion: 8
+    secondaryUVAreaDistortion: 15.000001
+    secondaryUVHardAngle: 88
+    secondaryUVPackMargin: 4
+    useFileScale: 1
+  tangentSpace:
+    normalSmoothAngle: 156
+    normalImportMode: 1
+    tangentImportMode: 3
+    normalCalculationMode: 4
+  importAnimation: 1
+  copyAvatar: 0
+  humanDescription:
+    serializedVersion: 2
+    human: []
+    skeleton: []
+    armTwist: 0.5
+    foreArmTwist: 0.5
+    upperLegTwist: 0.5
+    legTwist: 0.5
+    armStretch: 0.05
+    legStretch: 0.05
+    feetSpacing: 0
+    rootMotionBoneName: 
+    rootMotionBoneRotation: {x: 0, y: 0, z: 0, w: 1}
+    hasTranslationDoF: 0
+    hasExtraRoot: 0
+    skeletonHasParents: 1
+  lastHumanDescriptionAvatarSource: {instanceID: 0}
+  animationType: 2
+  humanoidOversampling: 1
+  additionalBone: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

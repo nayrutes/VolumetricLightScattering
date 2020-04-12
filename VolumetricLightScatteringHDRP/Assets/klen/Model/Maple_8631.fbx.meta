@@ -1,0 +1,213 @@
+fileFormatVersion: 2
+guid: 16a727d1bdcc2d24e8abea3bab7c5640
+timeCreated: 1506258404
+licenseType: Store
+ModelImporter:
+  serializedVersion: 21
+  fileIDToRecycleName:
+    100000: Bone045
+    100002: Bone046
+    100004: Bone047
+    100006: Bone048
+    100008: Bone049
+    100010: Bone050
+    100012: Bone051
+    100014: Bone052
+    100016: Bone053
+    100018: Bone054
+    100020: Bone055
+    100022: Bone056
+    100024: Bone057
+    100026: Bone058
+    100028: Bone059
+    100030: Bone060
+    100032: Bone061
+    100034: Bone062
+    100036: Bone063
+    100038: Bone064
+    100040: Bone067
+    100042: Bone068
+    100044: joint1
+    100046: joint2
+    100048: Line026
+    100050: Line027
+    100052: Line028
+    100054: Line029
+    100056: //RootNode
+    100058: Maple_8631
+    100060: Object1063
+    100062: Object1064
+    100064: Object1065
+    100066: Object1066
+    100068: Object1067
+    100070: Object1068
+    100072: Object1069
+    100074: transform1
+    100076: transform10
+    100078: transform11
+    100080: transform12
+    100082: transform2
+    100084: transform3
+    100086: transform4
+    100088: transform5
+    100090: transform6
+    100092: transform7
+    100094: transform8
+    100096: transform9
+    100098: Trunk
+    400000: Bone045
+    400002: Bone046
+    400004: Bone047
+    400006: Bone048
+    400008: Bone049
+    400010: Bone050
+    400012: Bone051
+    400014: Bone052
+    400016: Bone053
+    400018: Bone054
+    400020: Bone055
+    400022: Bone056
+    400024: Bone057
+    400026: Bone058
+    400028: Bone059
+    400030: Bone060
+    400032: Bone061
+    400034: Bone062
+    400036: Bone063
+    400038: Bone064
+    400040: Bone067
+    400042: Bone068
+    400044: joint1
+    400046: joint2
+    400048: Line026
+    400050: Line027
+    400052: Line028
+    400054: Line029
+    400056: Maple_8631
+    400058: //RootNode
+    400060: Object1063
+    400062: Object1064
+    400064: Object1065
+    400066: Object1066
+    400068: Object1067
+    400070: Object1068
+    400072: Object1069
+    400074: transform1
+    400076: transform10
+    400078: transform11
+    400080: transform12
+    400082: transform2
+    400084: transform3
+    400086: transform4
+    400088: transform5
+    400090: transform6
+    400092: transform7
+    400094: transform8
+    400096: transform9
+    400098: Trunk
+    4300000: Maple_8631
+    7400000: Wind
+    9500000: //RootNode
+    13700000: Maple_8631
+  materials:
+    importMaterials: 1
+    materialName: 0
+    materialSearch: 1
+  animations:
+    legacyGenerateAnimations: 4
+    bakeSimulation: 0
+    resampleCurves: 0
+    optimizeGameObjects: 0
+    motionNodeName: 
+    rigImportErrors: 
+    rigImportWarnings: 
+    animationImportErrors: 
+    animationImportWarnings: 
+    animationRetargetingWarnings: 
+    animationDoRetargetingWarnings: 0
+    animationCompression: 0
+    animationRotationError: 0.5
+    animationPositionError: 0.5
+    animationScaleError: 0.5
+    animationWrapMode: 0
+    extraExposedTransformPaths: []
+    clipAnimations:
+    - serializedVersion: 16
+      name: Wind
+      takeName: Take 001
+      firstFrame: 0
+      lastFrame: 200
+      wrapMode: 0
+      orientationOffsetY: 0
+      level: 0
+      cycleOffset: 0
+      loop: 0
+      hasAdditiveReferencePose: 0
+      loopTime: 1
+      loopBlend: 1
+      loopBlendOrientation: 0
+      loopBlendPositionY: 0
+      loopBlendPositionXZ: 0
+      keepOriginalOrientation: 0
+      keepOriginalPositionY: 1
+      keepOriginalPositionXZ: 0
+      heightFromFeet: 0
+      mirror: 0
+      bodyMask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
+      curves: []
+      events: []
+      transformMask: []
+      maskType: 3
+      maskSource: {instanceID: 0}
+      additiveReferencePoseFrame: 0
+    isReadable: 0
+  meshes:
+    lODScreenPercentages: []
+    globalScale: 30
+    meshCompression: 0
+    addColliders: 0
+    importVisibility: 0
+    importBlendShapes: 0
+    importCameras: 0
+    importLights: 0
+    swapUVChannels: 0
+    generateSecondaryUV: 1
+    useFileUnits: 1
+    optimizeMeshForGPU: 1
+    keepQuads: 0
+    weldVertices: 0
+    secondaryUVAngleDistortion: 8
+    secondaryUVAreaDistortion: 15.000001
+    secondaryUVHardAngle: 88
+    secondaryUVPackMargin: 4
+    useFileScale: 1
+  tangentSpace:
+    normalSmoothAngle: 156
+    normalImportMode: 1
+    tangentImportMode: 3
+    normalCalculationMode: 4
+  importAnimation: 1
+  copyAvatar: 0
+  humanDescription:
+    serializedVersion: 2
+    human: []
+    skeleton: []
+    armTwist: 0.5
+    foreArmTwist: 0.5
+    upperLegTwist: 0.5
+    legTwist: 0.5
+    armStretch: 0.05
+    legStretch: 0.05
+    feetSpacing: 0
+    rootMotionBoneName: 
+    rootMotionBoneRotation: {x: 0, y: 0, z: 0, w: 1}
+    hasTranslationDoF: 0
+    hasExtraRoot: 0
+    skeletonHasParents: 1
+  lastHumanDescriptionAvatarSource: {instanceID: 0}
+  animationType: 2
+  humanoidOversampling: 1
+  additionalBone: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
