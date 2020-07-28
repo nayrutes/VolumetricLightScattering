@@ -17,4 +17,8 @@ public class TextChanger : MonoBehaviour
             textField.text = texts[i];
         }
     }
+    public void SetMyText(string text)
+    {
+        textField.text = text;
+    }
 }
