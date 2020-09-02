@@ -10,6 +10,7 @@ using UnityEngine.Experimental.Rendering;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.HighDefinition;
 using UnityEngine.Serialization;
+using Visualisation;
 using Debug = UnityEngine.Debug;
 
 //[ExecuteInEditMode]
@@ -39,6 +40,7 @@ public class Froxels : MonoBehaviour
     public bool enableDebugDraw = true;
     public bool drawCorners = true;
     public bool drawEdges = true;
+    public float frustrumThickness;
     public bool drawSingle = false;
     public bool drawAll = false;
     public bool toggleSingleAll = false;
@@ -76,7 +78,8 @@ public class Froxels : MonoBehaviour
     [HideInInspector]
     public Vector3[] pointsCamRelative;
     public Camera _camera;
-    private Froxel[] _froxelsCamRelative;
+    [HideInInspector]
+    public Froxel[] _froxelsCamRelative;
     private Froxel[] _froxels;
     private float[] depths;
     private FroxelFlat[] ff;
@@ -583,20 +586,20 @@ public class Froxels : MonoBehaviour
         //farLeftBottom, farRightBottom, farLeftTop, farRightTop, nearLeftBottom, nearRightBottom, nearLeftTop, nearRightTop
         if (drawEdges && !enableTransformedChilds)
         {
-            Debug.DrawLine(f.corners[4], f.corners[0],Color.cyan);
-            Debug.DrawLine(f.corners[5], f.corners[1],Color.cyan);
-            Debug.DrawLine(f.corners[6], f.corners[2],Color.cyan);
-            Debug.DrawLine(f.corners[7], f.corners[3],Color.cyan);
-            
-            Debug.DrawLine(f.corners[4], f.corners[5],Color.cyan);
-            Debug.DrawLine(f.corners[6], f.corners[7],Color.cyan);
-            Debug.DrawLine(f.corners[0], f.corners[1],Color.cyan);
-            Debug.DrawLine(f.corners[2], f.corners[3],Color.cyan);
-            
-            Debug.DrawLine(f.corners[4], f.corners[6],Color.cyan);
-            Debug.DrawLine(f.corners[5], f.corners[7],Color.cyan);
-            Debug.DrawLine(f.corners[0], f.corners[2],Color.cyan);
-            Debug.DrawLine(f.corners[1], f.corners[3],Color.cyan);
+            Vis.DrawLine(f.corners[4], f.corners[0], frustrumThickness, Color.cyan, Style.Unlit);
+            Vis.DrawLine(f.corners[5], f.corners[1], frustrumThickness, Color.cyan, Style.Unlit);
+            Vis.DrawLine(f.corners[6], f.corners[2], frustrumThickness, Color.cyan, Style.Unlit);
+            Vis.DrawLine(f.corners[7], f.corners[3], frustrumThickness, Color.cyan, Style.Unlit);
+
+            Vis.DrawLine(f.corners[4], f.corners[5], frustrumThickness, Color.cyan, Style.Unlit);
+            Vis.DrawLine(f.corners[6], f.corners[7], frustrumThickness, Color.cyan, Style.Unlit);
+            Vis.DrawLine(f.corners[0], f.corners[1], frustrumThickness, Color.cyan, Style.Unlit);
+            Vis.DrawLine(f.corners[2], f.corners[3], frustrumThickness, Color.cyan, Style.Unlit);
+
+            Vis.DrawLine(f.corners[4], f.corners[6], frustrumThickness, Color.cyan, Style.Unlit);
+            Vis.DrawLine(f.corners[5], f.corners[7], frustrumThickness, Color.cyan, Style.Unlit);
+            Vis.DrawLine(f.corners[0], f.corners[2], frustrumThickness, Color.cyan, Style.Unlit);
+            Vis.DrawLine(f.corners[1], f.corners[3], frustrumThickness, Color.cyan, Style.Unlit);
         }
 
         if (drawCorners && !enableTransformedChilds)

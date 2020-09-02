@@ -1,0 +1,118 @@
+﻿// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel CSSliceZ
+#pragma kernel CSSliceX
+#pragma kernel CSSliceY
+#pragma kernel CSSetColor
+
+RWTexture3D<float4> Input;
+RWTexture2D<float4> Output;
+int toSlice;
+
+float4 ratios;
+float4 size;
+bool dimensionZ;
+bool dimensionY;
+bool dimensionX;
+bool flipZ;
+bool flipY;
+bool flipX;
+bool switchXY;
+//bool markSingle;
+//float4 singleFroxel;
+
+//SamplerState samplerInput;
+
+bool EarlyOut(uint3 id, float4 size)
+{
+    return (id.x >= size.x || id.y >= size.y || id.z >= size.z);
+}
+
+uint3 Get2dId(uint3 idT, uint3 size){
+    uint3 newId = uint3(idT.x,idT.y,idT.z);
+    if(switchXY)
+        {
+            newId.x = idT.y;
+            newId.y = idT.x;
+        }
+    if(flipX)
+        newId.x = size.x-1-newId.x;
+    if(flipY)
+        newId.y = size.y-1-newId.y;
+    if(flipZ)
+        newId.z = size.z-1-newId.z;
+    return newId;
+}
+
+[numthreads(8,8,1)]
+void CSSliceZ (uint3 id : SV_DispatchThreadID)
+{
+    if(EarlyOut(id, size))
+        return;
+    
+    //float r = 1.0f / (size - 1.0f);
+    //for (int zz = 0; zz < size.z; zz++){
+    //    Input[uint3(id.xy,zz)] = float4(id.x * r, id.y*r, zz*r, 1.0f);
+    //}
+    //Input[uint3(id.xy,zz)] =float4(1,0,0,1);
+    
+    if(dimensionZ){
+        for (int zz = 0; zz < size.z; zz++) {
+        if(zz==toSlice)
+            {
+               Output[Get2dId(id,size).xy] = Input[uint3(id.x, id.y,zz)];
+            }
+        }
+    }
+    
+    
+ }   
+[numthreads(1,8,8)]
+void CSSliceX (uint3 id : SV_DispatchThreadID)
+{
+    if(EarlyOut(id, size))
+        return;
+    float r = 1.0f / (size - 1.0f);
+    /*for (int zz = 0; zz < size.z; zz++){
+        Input[uint3(id.xy,zz)] = float4(id.x * r, id.y*r, zz*r, 1.0f);
+    }*/
+    if(dimensionX){
+        for (int xx = 0; xx < size.x; xx++){
+        if(xx==toSlice)
+            {
+            Output[Get2dId(id,size).zy] =  Input[uint3(xx,id.y,id.z)];
+            }
+        }
+    }
+}
+
+[numthreads(8,1,8)]
+void CSSliceY (uint3 id : SV_DispatchThreadID)
+{
+    if(EarlyOut(id, size))
+        return;
+    float r = 1.0f / (size - 1.0f);
+    /*for (int zz = 0; zz < size.z; zz++){
+        Input[uint3(id.xy,zz)] = float4(id.x * r, id.y*r, zz*r, 1.0f);
+    }*/
+    if(dimensionY){
+        for (int yy = 0; yy < size.y; yy++){
+        if(yy==toSlice)
+            {
+            Output[Get2dId(id,size).xz] =  Input[uint3(id.x,yy,id.z)];
+            }
+        }
+    }
+}
+
+
+[numthreads(8,8,1)]
+void CSSetColor (uint3 id : SV_DispatchThreadID)
+{
+    if(EarlyOut(id, size))
+        return;
+    
+    float r = 1.0f / (size - 1.0f);
+    for (int zz = 0; zz < size.z; zz++){
+        Input[uint3(id.xy,zz)] = float4(id.x * r, id.y*r, zz*r, 1.0f);
+    }
+}

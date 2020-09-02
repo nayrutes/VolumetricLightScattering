@@ -11,13 +11,15 @@ public class DrawHelper : MonoBehaviour
 
     public Froxels f;
     
-    public float size = 1;
+    public float lineSize = 1;
+    public float sphereSize = 1;
     public Vector3 offset;
     public GameObject camSymbol;
     
     public bool doDrawNow = false;
     public bool drawFrame = false;
     public bool drawAllLines = false;
+    public bool drawCenters = false;
     
     // Start is called before the first frame update
     private Vector3 camSymOriginalPos;
@@ -29,9 +31,12 @@ public class DrawHelper : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        if (f == null||f.pointsCamRelative == null || f.pointsCamRelative.Length == 0||f._froxelsCamRelative == null)
+            return;
         if (doDrawNow)
         {
             DoDrawDepth();
+            DrawCenters();
             //doDrawNow = false;
             //Vis.DrawSphere(new Vector3(0,0,0),size,Color.green,Style.Standard);
         }
@@ -52,6 +57,29 @@ public class DrawHelper : MonoBehaviour
             DrawAllLines();
         }
     }
+
+    void DrawCenters()
+    {
+        if(!drawCenters)
+            return;
+        Vector3Int amount = f.amount;
+        Camera _camera = f._camera;
+        //Vector3[] pointsCamRelative = f.pointsCamRelative;
+        Froxels.Froxel[] froxels = f._froxelsCamRelative;
+        if (froxels.Length < 4)
+            return;
+        
+        Matrix4x4 comb = _camera.transform.localToWorldMatrix;
+        for (int i = 0; i < froxels.Length; i++)
+        {
+            //z * ((amount.x) * (amount.y)) + y * (amount.x) + x
+            //int x = froxels.Length % amount.x
+            Vector3Int indexes = UnFlat(i, amount);
+            Color c = GetColorOfPoint(indexes, amount);
+            Vis.DrawSphere(froxels[i].center,sphereSize/25f,c,Style.Unlit);
+            //GetColorOfPoint()
+        }
+    }
     
     void DrawFrame()
     {
@@ -69,47 +97,6 @@ public class DrawHelper : MonoBehaviour
             DrawBottomToTop(0, z, pointsCamRelative, amount, comb);
             DrawBottomToTop(amount.x, z, pointsCamRelative, amount, comb);
         }
-        
-        //z
-//        for (int z = 0; z < amount.z+1; z++)
-//        {
-//            Matrix4x4 comb = _camera.transform.localToWorldMatrix;            
-//
-//            Vector3 bottomleft = pointsCamRelative[GetIndex(z,0,0,amount)];//lbn
-//            Vector3 topleft = pointsCamRelative[GetIndex(z,amount.y,0,amount)];//ltn z y 0
-//            Vector3 bottomright = pointsCamRelative[GetIndex(z,0,amount.x,amount)];//lbn z 0 x
-//            Vector3 topright = pointsCamRelative[GetIndex(z,amount.y,amount.x,amount)];//ltn z y x
-//            bottomleft = comb.MultiplyPoint3x4(bottomleft);
-//            topleft = comb.MultiplyPoint3x4(topleft);
-//            bottomright = comb.MultiplyPoint3x4(bottomright);
-//            topright = comb.MultiplyPoint3x4(topright);
-//            Vis.DrawLine(bottomleft,topleft, size,Color.cyan, Style.Unlit);
-//            Vis.DrawLine(topright,bottomright, size,Color.cyan, Style.Unlit);
-//            Vis.DrawLine(bottomleft,bottomright, size,Color.cyan, Style.Unlit);
-//            Vis.DrawLine(topright,topleft, size,Color.cyan, Style.Unlit);
-//            
-//            
-//        }
-//        
-//        //y
-//        for (int y = 0; y < amount.y+1; y++)
-//        {
-//            Matrix4x4 comb = _camera.transform.localToWorldMatrix;            
-//
-//            Vector3 leftNear = pointsCamRelative[GetIndex(0,y,0,amount)];
-//            Vector3 leftFar = pointsCamRelative[GetIndex(0,y,amount.z,amount)];
-//            Vector3 rightNear = pointsCamRelative[GetIndex(amount.x,y,0,amount)];
-//            Vector3 rightFar = pointsCamRelative[GetIndex(amount.x,y,amount.z,amount)];
-//            leftNear = comb.MultiplyPoint3x4(leftNear);
-//            leftFar = comb.MultiplyPoint3x4(leftFar);
-//            rightNear = comb.MultiplyPoint3x4(rightNear);
-//            rightFar = comb.MultiplyPoint3x4(rightFar);
-//            Vis.DrawLine(leftNear,leftFar, size,Color.cyan, Style.Unlit);
-//            Vis.DrawLine(leftNear,rightNear, size,Color.cyan, Style.Unlit);
-//            Vis.DrawLine(rightFar,rightNear, size,Color.cyan, Style.Unlit);
-//            Vis.DrawLine(rightFar,leftFar, size,Color.cyan, Style.Unlit);
-//            
-//        }
     }
 
 
@@ -162,13 +149,22 @@ public class DrawHelper : MonoBehaviour
         return z * ((amount.x + 1) * (amount.y + 1)) + y * (amount.x + 1) + x;
     }
 
+    Color GetColorOfPoint(Vector3Int p, Vector3Int amount)
+    {
+        float r = p.x / (float) amount.x;
+        float g = p.y / (float) amount.y;
+        float b = p.z / (float) amount.z;
+        Color c = new Color(r,g,b);
+        return c;
+    }
+    
     void DrawLeftToRight(int y, int z, Vector3[] pointsCamRelative, Vector3Int amount, Matrix4x4 localToWorld)
     {
         Vector3 left = pointsCamRelative[GetIndex(0,y,z,amount)];
         Vector3 right = pointsCamRelative[GetIndex(amount.x,y,z,amount)];
         left = localToWorld.MultiplyPoint3x4(left);
         right = localToWorld.MultiplyPoint3x4(right);
-        Vis.DrawLine(left,right, size,Color.cyan, Style.Unlit);
+        Vis.DrawLine(left,right, lineSize,Color.cyan, Style.Unlit);
     }
     
     void DrawBottomToTop(int x, int z, Vector3[] pointsCamRelative, Vector3Int amount, Matrix4x4 localToWorld)
@@ -177,7 +173,7 @@ public class DrawHelper : MonoBehaviour
         Vector3 top = pointsCamRelative[GetIndex(x,amount.y,z,amount)];
         bottom = localToWorld.MultiplyPoint3x4(bottom);
         top = localToWorld.MultiplyPoint3x4(top);
-        Vis.DrawLine(bottom,top, size,Color.cyan, Style.Unlit);
+        Vis.DrawLine(bottom,top, lineSize,Color.cyan, Style.Unlit);
     }
     
     void DrawFrontToBack(int x, int y, Vector3[] pointsCamRelative, Vector3Int amount, Matrix4x4 localToWorld)
@@ -186,6 +182,14 @@ public class DrawHelper : MonoBehaviour
         Vector3 back = pointsCamRelative[GetIndex(x,y,amount.z,amount)];
         front = localToWorld.MultiplyPoint3x4(front);
         back = localToWorld.MultiplyPoint3x4(back);
-        Vis.DrawLine(front,back, size,Color.cyan, Style.Unlit);
+        Vis.DrawLine(front,back, lineSize,Color.cyan, Style.Unlit);
+    }
+    
+    Vector3Int UnFlat(int index, Vector3Int amount)
+    {
+        int x = (index % (amount.x*amount.y)%amount.x);
+        int y = (index % (amount.x*amount.y)) / amount.x;
+        int z = index / (amount.x * amount.y);
+        return new Vector3Int(x,y,z);
     }
 }

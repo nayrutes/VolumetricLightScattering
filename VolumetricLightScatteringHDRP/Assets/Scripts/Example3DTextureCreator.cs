@@ -5,17 +5,23 @@ using UnityEngine.Rendering;
 
 public class Example3DTextureCreator : MonoBehaviour
 {
-    Texture3D texture;
-
+    private Texture3D texture;
+    public RenderTexture renderTexture;
+    public int size = 8;
     void Start ()
     {
-        texture = CreateTexture3D (256);
-        RenderTexture renderTexture = new RenderTexture(256, 256, 0, RenderTextureFormat.ARGB32)
-        {
-            dimension = TextureDimension.Tex3D, volumeDepth = 256, enableRandomWrite = true
-        };
+        texture = CreateTexture3D (size);
+        renderTexture.Release();
+        renderTexture.dimension = TextureDimension.Tex3D;
+        renderTexture.enableRandomWrite = true;
+        renderTexture.volumeDepth = size;
+        //        renderTexture = new RenderTexture(size, size, 0, RenderTextureFormat.ARGB32)
+//        {
+//            dimension = TextureDimension.Tex3D, volumeDepth = size, enableRandomWrite = true
+//        };
         renderTexture.Create();
         Graphics.Blit(texture,renderTexture);
+        //Graphics.Blit(texture, renderTextureResult);
         //FindObjectOfType<DebugSlice>().texture3DToSlice = renderTexture;
     }
 
