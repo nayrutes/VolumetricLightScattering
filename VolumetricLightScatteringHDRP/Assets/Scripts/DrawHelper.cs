@@ -10,7 +10,7 @@ public class DrawHelper : MonoBehaviour
 {
 
     public Froxels f;
-    
+    public Camera cam;
     public float lineSize = 1;
     public float sphereSize = 1;
     public Vector3 offset;
@@ -20,6 +20,9 @@ public class DrawHelper : MonoBehaviour
     public bool drawFrame = false;
     public bool drawAllLines = false;
     public bool drawCenters = false;
+    public bool drawCameraFrustum = false;
+    
+    public Color lineColor = Color.cyan;
     
     // Start is called before the first frame update
     private Vector3 camSymOriginalPos;
@@ -31,6 +34,7 @@ public class DrawHelper : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        DrawCameraFrustum();
         if (f == null||f.pointsCamRelative == null || f.pointsCamRelative.Length == 0||f._froxelsCamRelative == null)
             return;
         if (doDrawNow)
@@ -44,7 +48,27 @@ public class DrawHelper : MonoBehaviour
         //camSymbol.transform.position = camSymOriginalPos + offset;
     }
 
-    
+    public void DrawCameraFrustum()
+    {
+        if (!drawCameraFrustum)
+            return;
+        Vector3[] nearCornersWorld = new Vector3[4];
+        Vector3[] farCornersWorld = new Vector3[4];
+        cam.CalculateFrustumCorners(new Rect(0,0,1,1),cam.nearClipPlane,Camera.MonoOrStereoscopicEye.Mono, nearCornersWorld);
+        cam.CalculateFrustumCorners(new Rect(0,0,1,1),cam.farClipPlane,Camera.MonoOrStereoscopicEye.Mono, farCornersWorld);
+        var transform1 = cam.transform;
+        var position = transform1.position;
+        for (int i = 0; i < 4; i++)
+        {
+            nearCornersWorld[i] = new Vector4(position.x,position.y,position.z,0) + transform1.localToWorldMatrix * nearCornersWorld[i];
+            farCornersWorld[i] = new Vector4(position.x,position.y,position.z,0) + transform1.localToWorldMatrix * farCornersWorld[i];
+            //Debug.DrawLine(transformed1,transformed2,Color.black);
+            Vis.DrawLine(nearCornersWorld[i], farCornersWorld[i], lineSize, lineColor, Style.Unlit);
+        }
+
+        Vis.DrawConnectDots(nearCornersWorld, lineSize, lineColor, Style.Unlit);
+        Vis.DrawConnectDots(farCornersWorld, lineSize, lineColor, Style.Unlit);
+    }
     public void DoDrawDepth()
     {
         if (drawFrame)

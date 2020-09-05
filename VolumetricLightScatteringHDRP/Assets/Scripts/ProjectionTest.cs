@@ -27,6 +27,7 @@ public class ProjectionTest : MonoBehaviour
     [Header("Spheres")]
     [SerializeField] private Color c2;
     [SerializeField] private Color c3;
+    [SerializeField] private Color c7;
     [Header("Lines")]
     [SerializeField] private Color c1;
     [SerializeField] private Color c4;
@@ -59,7 +60,9 @@ public class ProjectionTest : MonoBehaviour
         
         DrawDebugCube(cam.transform, normalizedBox, c1, lineSize);
         DrawFrustum(cam, c1, lineSize);
-        TestProjectionFromWorldToBox(c2);
+        
+        TestPositiveDistance();
+        TestProjectionFromWorldToBox(c2,c7);
         if (alignInBoxXY)
         {
             pointInBox = cam.transform.worldToLocalMatrix * pointInBox;
@@ -78,7 +81,6 @@ public class ProjectionTest : MonoBehaviour
         }
         
         
-        TestPositiveDistance();
         if (drawDistance)
         {
             Color c;
@@ -104,7 +106,7 @@ public class ProjectionTest : MonoBehaviour
         DrawByDistance(new Vector2(projectedIntoBoxLocal.x,projectedIntoBoxLocal.y),distance);
     }
     
-    public void TestProjectionFromWorldToBox(Color c)
+    public void TestProjectionFromWorldToBox(Color c, Color cBlocked)
     {
 //        //Point from World to Box
 //        Matrix4x4 camP = cam.projectionMatrix;
@@ -140,7 +142,23 @@ public class ProjectionTest : MonoBehaviour
         bool isInside;
         projectedIntoBoxLocal = WorldToProjectedLocal(pointInScene, cam, normalizedBox, out isInside);
         Vector3 pointProjectedInWorld = ToWorld(projectedIntoBoxLocal, cam.transform);
-        Color cResult = isInside ? c : Color.red;
+        
+        Color cResult;// = isInside ? c : Color.red;
+        if (isInside)
+        {
+            if (distancePositive)
+            {
+                cResult = cBlocked;
+            }
+            else
+            {
+                cResult = c;
+            }
+        }
+        else
+        {
+            cResult = Color.red;
+        }
         if (drawFrustumToBox)
         {
             //Froxels.DrawPointCross(pointInScene,0.2f,Color.cyan);
