@@ -17,7 +17,8 @@ public class ThreeDToCube : MonoBehaviour
     [SerializeField] public Material blitMat;
     [Range(0f,1f)]
     public float debugSlider;
-    
+
+    [SerializeField] public bool setColor = true;
     [Range(0f,1f)]
     [SerializeField] public float SizeX =1;
     [Range(0f,1f)]
@@ -91,9 +92,11 @@ public class ThreeDToCube : MonoBehaviour
         //slicer.SetVector("singleFroxel", new Vector4(_froxels.singleFroxel.x,_froxels.singleFroxel.y,_froxels.singleFroxel.z,0));
         //slicer.SetBool("markSingle", !_froxels.toggleSingleAll);
         //int threadGroupsX = texture3DToSlice.volumeDepth / 256;
-        
-        Vector3Int dispatchesMain = new Vector3Int(Froxels.CeilDispatch(texture3DToSlice.width,8),Froxels.CeilDispatch(texture3DToSlice.height,8),1);
-        slicer.Dispatch(3,dispatchesMain.x,dispatchesMain.y,dispatchesMain.z);
+        if (setColor)
+        {
+            Vector3Int dispatchesMain = new Vector3Int(Froxels.CeilDispatch(texture3DToSlice.width,8),Froxels.CeilDispatch(texture3DToSlice.height,8),1);
+            slicer.Dispatch(3,dispatchesMain.x,dispatchesMain.y,dispatchesMain.z);
+        }
         
         if(d==Dimension.z)
         {

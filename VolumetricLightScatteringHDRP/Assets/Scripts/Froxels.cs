@@ -51,9 +51,12 @@ public class Froxels : MonoBehaviour
     public bool enableGenerateFroxelsEveryFrame = true;
     public bool enableCalculateShadows = true;
     public bool enableTransformedChilds = true;
-    
+    //public CustomPass effectPassVolume;
+    public bool disableResult;
     //https://bitbucket.org/Unity-Technologies/cinematic-image-effects/src/96901525f6864a62aeadec288cc7749fef4c70a9/UnityProject/Assets/Standard%20Assets/Effects/CinematicEffects(BETA)/TonemappingColorGrading/TonemappingColorGrading.cs
     [SerializeField] private AnimationCurve depthDistribution;
+    [SerializeField] private AnimationCurve depthDistribution2;
+    [SerializeField] private bool useDepthdistribution2;
     [SerializeField] private RenderTexture CurveOutput;
     private Texture2D m_CurveTexture;
     private Texture2D curveTexture
@@ -92,7 +95,7 @@ public class Froxels : MonoBehaviour
     private Matrix4x4 lastFrameWorldToLocal;
     
     private Vector4[] points4;
-    
+    private CustomPassVolume[] cpvs;
     public struct Froxel
     {
         //public Frustum frustum;
@@ -119,6 +122,7 @@ public class Froxels : MonoBehaviour
     {
         _camera = GetComponent<Camera>();
         _debugSlice = FindObjectOfType<DebugSlice>();
+        cpvs = GetComponents<CustomPassVolume>();
     }
 
     private void OnDisable()
@@ -178,6 +182,10 @@ public class Froxels : MonoBehaviour
     
     void Update()
     {
+        foreach (CustomPassVolume customPassVolume in cpvs)
+        {
+            customPassVolume.enabled = !disableResult;
+        }
         DrawOutlineFrustrum();
         if (enableGenerateFroxelsEveryFrame)
         {
@@ -287,7 +295,12 @@ public class Froxels : MonoBehaviour
         _froxels = new Froxel[amount.x*amount.y*amount.z];
         _froxelsCamRelative = new Froxel[amount.x*amount.y*amount.z];
         
-        GenCurveTexture(depthDistribution);
+        if(!useDepthdistribution2)
+            GenCurveTexture(depthDistribution);
+        else
+        {
+            GenCurveTexture(depthDistribution2);
+        }
         SetUpShadow(_froxels.Length);
         
         Vector3[] fC = new Vector3[4];
@@ -637,7 +650,13 @@ public class Froxels : MonoBehaviour
     
     private float CreateNonLinear(float value)
     {
-        float result = depthDistribution.Evaluate(value);
+        float result;
+        if(!useDepthdistribution2)
+            result = depthDistribution.Evaluate(value);
+        else
+        {
+            result = depthDistribution2.Evaluate(value);
+        }
         return result;
     }
     
