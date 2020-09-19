@@ -46,8 +46,9 @@ public class ThreeDToCube : MonoBehaviour
         AdjustRenderTexture(bottom,false,true);
         AdjustRenderTexture(left,false,true);
         AdjustRenderTexture(right,false,true);
-        
-        AdjustRenderTexture(cubeTexture, new Vector3Int(amount.x*3, amount.y*3,amount.z*3), false, true);
+
+        int max = Mathf.Max(amount.x, amount.y, amount.z);
+        AdjustRenderTexture(cubeTexture, new Vector3Int(max*3, max*3,max*3), false, true);
     }
 
     // Update is called once per frame
